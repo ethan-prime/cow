@@ -1,7 +1,8 @@
 #include <string>
 #include "tokens.h"
+#include <vector>
 
-#pragma once;
+#pragma once
 
 using namespace std;
 
@@ -28,4 +29,13 @@ public:
 
     // gets next token in buffer
     Token next_token();
+
+    // returns a vector of tokens tokenized from a buffer string.
+    vector<Token> tokenize();
 };
+
+// returns true if its a keyword, false otherwise. stores token_type in &kind.
+bool is_keyword(const string &buf, token_type &kind);
+
+// reads contents of file into &buf.
+string read_file(const string &filename);

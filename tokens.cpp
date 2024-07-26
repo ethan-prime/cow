@@ -33,5 +33,7 @@ string Token::repr()
         return "=";
     case INVALID:
         return "invalid";
+    case END_OF_FILE:
+        return "eof";
     }
 }

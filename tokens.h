@@ -1,6 +1,6 @@
 #include <string>
 
-#pragma once;
+#pragma once
 
 using namespace std;
 
@@ -19,9 +19,11 @@ enum token_type
     LABEL,
     EQUAL,
     INVALID,
+    END_OF_FILE,
 };
 
 class Token
+// maybe we could store row, col for error printing?
 {
 public:
     token_type kind;
