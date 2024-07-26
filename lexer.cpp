@@ -30,3 +30,9 @@ void Lexer::skip_whitespace()
     while (isspace(this->current_char))
         this->read();
 }
+
+Token Lexer::next_token()
+{
+    Token token(INVALID, "invalid");
+    return token;
+}

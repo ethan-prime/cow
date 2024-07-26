@@ -1,4 +1,8 @@
 #include <string>
+#include "tokens.h"
+
+#pragma once;
+
 using namespace std;
 
 class Lexer
@@ -21,4 +25,7 @@ public:
 
     // skips until current char isnt space
     void skip_whitespace();
+
+    // gets next token in buffer
+    Token next_token();
 };

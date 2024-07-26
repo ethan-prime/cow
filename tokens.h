@@ -1,4 +1,7 @@
 #include <string>
+
+#pragma once;
+
 using namespace std;
 
 enum token_type
@@ -18,4 +21,13 @@ enum token_type
     INVALID,
 };
 
-string token_repr(token_type t);
+class Token
+{
+public:
+    token_type kind;
+    string value;
+
+    Token(token_type kind, string value);
+
+    string repr();
+};

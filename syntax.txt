@@ -5,5 +5,5 @@
 <comparison> ::= <term> <comparison_op> <term>
 <comparison_op> ::= '<'
 <assignment> ::= <identifier> = <expr>
-<statment> ::= <assignment> | 'if' <comparison> 'then' <statment> | 'goto' <label> | 'print' <term>
+<statement> ::= <assignment> | 'if' <comparison> 'then' <statement> | 'goto' <label> | 'print' <term>
 <label> ::= ':' <str_literal>

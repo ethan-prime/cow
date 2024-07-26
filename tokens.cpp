@@ -1,9 +1,11 @@
 #include "tokens.h"
 using namespace std;
 
-string token_repr(token_type t)
+Token::Token(token_type kind, string value) : kind(kind), value(value) {};
+
+string Token::repr()
 {
-    switch (t)
+    switch (this->kind)
     {
     case IDENTIFIER:
         return "idenitifer";
