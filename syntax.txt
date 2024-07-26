@@ -1,0 +1,9 @@
+<literal> ::= str_literal | int_literal
+<term> ::= 'input' | <variable> | <int_literal>
+<expr> ::= <term> | <term> <arithmetic_op> <term>
+<arithmetic_op> ::= '+'
+<comparison> ::= <term> <comparison_op> <term>
+<comparison_op> ::= '<'
+<assignment> ::= <variable> = <expr>
+<statment> ::= <assignment> | 'if' <comparison> 'then' <statment> | 'goto' <label> | 'print' <term>
+<label> ::= ':' <str_literal>
