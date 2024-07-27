@@ -24,13 +24,13 @@ string Token::repr()
     case THEN:
         return "then";
     case OP_LT:
-        return "<";
+        return "op_lt";
     case OP_PLUS:
-        return "+";
+        return "op_plus";
     case LABEL:
         return "label";
     case EQUAL:
-        return "=";
+        return "equal";
     case INVALID:
         return "invalid";
     case END_OF_FILE:
