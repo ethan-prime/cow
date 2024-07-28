@@ -12,6 +12,7 @@ private:
     string buffer;
     unsigned int pos;
     unsigned int read_pos;
+    unsigned int line_number;
     char current_char;
 
 public:

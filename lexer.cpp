@@ -3,7 +3,7 @@
 #include <fstream>
 
 // constructor
-Lexer::Lexer(const string &buffer) : buffer(buffer), pos(0), read_pos(0), current_char(0)
+Lexer::Lexer(const string &buffer) : buffer(buffer), pos(0), read_pos(0), current_char(0), line_number(1)
 {
     this->read();
 };
@@ -34,7 +34,11 @@ char Lexer::read()
 void Lexer::skip_whitespace()
 {
     while (isspace(this->current_char))
+    {
+        if (this->current_char == '\n')
+            line_number++;
         this->read();
+    }
 }
 
 // returns true if its a keyword, false otherwise. stores token_type in &kind.
@@ -80,23 +84,23 @@ Token Lexer::next_token()
     if (this->current_char == EOF)
     {
         this->read();
-        return Token(END_OF_FILE, "");
+        return Token(END_OF_FILE, "", this->line_number);
     }
     else if (this->current_char == '<')
     {
         this->read();
-        return Token(OP_LT, "");
+        return Token(OP_LT, "", this->line_number);
     }
     else if (this->current_char == '+')
     {
         this->read();
-        return Token(OP_PLUS, "");
+        return Token(OP_PLUS, "", this->line_number);
     }
     // add support for == soon !
     else if (this->current_char == '=')
     {
         this->read();
-        return Token(EQUAL, "");
+        return Token(EQUAL, "", this->line_number);
     }
     // label !?
     else if (this->current_char == ':')
@@ -111,7 +115,7 @@ Token Lexer::next_token()
             this->read();
         }
 
-        return Token(LABEL, buf);
+        return Token(LABEL, buf, this->line_number);
     }
     // int
     else if (isdigit(this->current_char))
@@ -125,7 +129,7 @@ Token Lexer::next_token()
             this->read();
         }
 
-        return Token(INT_LITERAL, buf);
+        return Token(INT_LITERAL, buf, this->line_number);
     }
     // idenitifer or other alpha keyword!
     else if (isalnum(this->current_char))
@@ -144,16 +148,16 @@ Token Lexer::next_token()
         if (is_keyword(buf, kind))
         {
             // if its a keyword, return that.
-            return Token(kind, "");
+            return Token(kind, "", this->line_number);
         }
         // else, it should be an identifier.
-        return Token(IDENTIFIER, buf);
+        return Token(IDENTIFIER, buf, this->line_number);
     }
     // INVALID TOKEN!!!
     else
     {
         this->read();
-        return Token(INVALID, string(1, this->current_char));
+        return Token(INVALID, string(1, this->current_char), this->line_number);
     }
 }
 

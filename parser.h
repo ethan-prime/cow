@@ -1,11 +1,13 @@
 #include <string>
 #include "tokens.h"
 #include <vector>
+#include <variant>
 
 #pragma once
 
 using namespace std;
 
+// skeleton for AST
 enum statement_type
 {
     STMT_ASSIGN,
@@ -17,7 +19,8 @@ enum statement_type
 
 enum expr_type
 {
-    EXPR_PLUS
+    UNARY_EXPR,
+    BINARY_EXPR_PLUS
 };
 
 enum term_kind
@@ -42,10 +45,7 @@ struct term_binary_node
 struct expr_node
 {
     expr_type kind;
-    union
-    {
-        term_binary_node binary_expr;
-    };
+    variant<term_binary_node, term_node> expr;
 };
 
 struct assign_node
@@ -56,16 +56,13 @@ struct assign_node
 
 enum comparison_type
 {
-    LESS_THAN,
+    COMP_LESS_THAN,
 };
 
 struct comparison_node
 {
     comparison_type kind;
-    union
-    {
-        term_binary_node binary_expr;
-    };
+    variant<term_binary_node> binary_expr;
 };
 
 struct statement_node;
@@ -93,17 +90,49 @@ struct label_node
 struct statement_node
 {
     statement_type kind;
-    union
-    {
-        assign_node assign;
-        if_then_node if_then;
-        goto_node goto_;
-        print_node print;
-        label_node label;
-    };
+    variant<assign_node, if_then_node, goto_node, print_node, label_node> statement;
 };
 
 struct program_node
 {
     vector<statement_node> statements;
+};
+
+// parser object
+class Parser
+{
+private:
+    vector<Token> tokens;
+    unsigned int pos;
+
+public:
+    // constructor
+    Parser(vector<Token> tokens);
+
+    // called when invalid syntax/parsing error
+    void error(const string &expected);
+
+    // returns current token in tokenfeed
+    Token current_token();
+
+    // advances to next token in the tokenfeed
+    void advance();
+
+    // parses a list of tokens into a program. returns a program node (AST representation).
+    program_node parse_program();
+
+    statement_node parse_statement();
+
+    // statement node parsers
+    statement_node parse_assignment();
+    statement_node parse_if_then();
+    statement_node parse_goto();
+    statement_node parse_print();
+    statement_node parse_label();
+
+    expr_node parse_expr();
+
+    term_node parse_term();
+
+    comparison_node parse_comparison();
 };
