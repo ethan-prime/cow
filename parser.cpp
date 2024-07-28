@@ -3,7 +3,7 @@
 using namespace std;
 
 // constructor
-Parser::Parser(vector<Token> tokens) : tokens(tokens) {};
+Parser::Parser(vector<Token> tokens) : tokens(tokens), pos(0) {};
 
 // returns current token in tokenfeed
 Token Parser::current_token()
@@ -39,47 +39,48 @@ void Parser::error(const string &expected)
 program_node Parser::parse_program()
 {
     // we will add statements to this and return when done parsing.
-
     program_node program;
-
-    do
+    while (this->current_token().kind != END_OF_FILE)
     {
         program.statements.push_back(this->parse_statement());
-    } while (this->current_token().kind != END_OF_FILE);
+    };
 
+    cout << "Parsed " << program.statements.size() << " statements." << endl;
     return program;
 };
 
 statement_node Parser::parse_statement()
 {
+    statement_node stmt;
     // <statement> ::= <assignment> | 'if' <comparison> 'then' <statement> | 'goto' <label> | 'print' <term> | <label>
     if (this->current_token().kind == IDENTIFIER)
     {
         // this has to be an assignment!
-        return this->parse_assignment();
+        stmt = this->parse_assignment();
     }
     else if (this->current_token().kind == IF)
     {
         // this is an if then statement
-        return this->parse_if_then();
+        stmt = this->parse_if_then();
     }
     else if (this->current_token().kind == GOTO)
     {
         // this is a goto...
-        return this->parse_goto();
+        stmt = this->parse_goto();
     }
     else if (this->current_token().kind == PRINT)
     {
-        return this->parse_print();
+        stmt = this->parse_print();
     }
     else if (this->current_token().kind == LABEL)
     {
-        return this->parse_label();
+        stmt = this->parse_label();
     }
     else
     {
         error("a statement");
     }
+    return stmt;
 };
 
 // <assignment> ::= <identifier> = <expr>

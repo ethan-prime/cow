@@ -23,13 +23,13 @@ enum token_type
 };
 
 class Token
-// maybe we could store row, col for error printing?
 {
 public:
     token_type kind;
     string value;
+    unsigned int line_number;
 
-    Token(token_type kind, string value);
+    Token(token_type kind, string value, unsigned int line_number);
 
     string repr();
 };

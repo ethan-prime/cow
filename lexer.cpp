@@ -3,7 +3,7 @@
 #include <fstream>
 
 // constructor
-Lexer::Lexer(const string &buffer) : buffer(buffer), pos(0), read_pos(0), current_char(0), line_number(1)
+Lexer::Lexer(const string &buffer) : buffer(buffer), pos(0), read_pos(0), line_number(1), current_char(0)
 {
     this->read();
 };
@@ -173,6 +173,8 @@ vector<Token> Lexer::tokenize()
         tokens.push_back(current_token);
         current_token = this->next_token();
     }
+
+    tokens.push_back(current_token);
 
     return tokens;
 }

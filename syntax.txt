@@ -6,3 +6,4 @@
 <assignment> ::= <identifier> = <expr>
 <statement> ::= <assignment> | 'if' <comparison> 'then' <statement> | 'goto' <label> | 'print' <term> | <label>
 <label> ::= ':' <str_literal>
+<program> ::= <statement> [<statement>]*

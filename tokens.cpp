@@ -1,7 +1,7 @@
 #include "tokens.h"
 using namespace std;
 
-Token::Token(token_type kind, string value) : kind(kind), value(value) {};
+Token::Token(token_type kind, string value, unsigned int line_number) : kind(kind), value(value), line_number(line_number) {};
 
 string Token::repr()
 {
@@ -35,5 +35,7 @@ string Token::repr()
         return "invalid";
     case END_OF_FILE:
         return "eof";
+    default:
+        return "moo! something went wrong when tokenizing...";
     }
 }

@@ -1,4 +1,5 @@
 #include "lexer.h"
+#include "parser.h"
 #include <iostream>
 using namespace std;
 
@@ -22,12 +23,17 @@ int main()
     {
         if (token.value != "")
         {
-            cout << token.repr() << " (" << token.value << ")" << endl;
+            cout << token.repr() << " (" << token.value << ") @ line " << token.line_number << endl;
         }
         else
         {
-            cout << token.repr() << endl;
+            cout << token.repr() << " @ line " << token.line_number << endl;
         }
     }
+
+    cout << endl;
+    cout << "PARSING FILE..." << endl;
+    Parser parser(tokens);
+    program_node p = parser.parse_program();
     return 0;
 }
