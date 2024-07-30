@@ -35,5 +35,8 @@ int main()
     cout << "PARSING FILE..." << endl;
     Parser parser(tokens);
     program_node p = parser.parse_program();
+    cout << endl;
+    cout << "AST:" << endl;
+    print_program(p);
     return 0;
 }

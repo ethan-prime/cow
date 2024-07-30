@@ -136,3 +136,12 @@ public:
 
     comparison_node parse_comparison();
 };
+
+// prints AST of program
+void print_program(program_node program);
+void print_assign(assign_node assign);
+void print_expr(expr_node expr);
+void print_goto(goto_node goto_);
+void print_if_then(if_then_node if_then);
+void print_print(print_node print);
+void print_label(label_node label);

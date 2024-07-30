@@ -186,9 +186,10 @@ statement_node Parser::parse_if_then()
     {
         error("then");
     }
-    statement_node then_stmt = this->parse_statement();
-    if_then.statement = &then_stmt;
+    statement_node *then_stmt = new statement_node(this->parse_statement());
+    if_then.statement = then_stmt;
     stmt.kind = STMT_IF_THEN;
+    stmt.statement = if_then;
     return stmt;
 };
 
@@ -274,4 +275,113 @@ statement_node Parser::parse_print()
     stmt.statement = print_node{this->parse_term()};
     stmt.kind = STMT_PRINT;
     return stmt;
+};
+
+// prints AST of program
+void print_program(program_node program)
+{
+    for (statement_node stmt : program.statements)
+    {
+        switch (stmt.kind)
+        {
+        case STMT_ASSIGN:
+            print_assign(get<assign_node>(stmt.statement));
+            break;
+        case STMT_GOTO:
+            print_goto(get<goto_node>(stmt.statement));
+            break;
+        case STMT_IF_THEN:
+            print_if_then(get<if_then_node>(stmt.statement));
+            break;
+        case STMT_LABEL:
+            print_label(get<label_node>(stmt.statement));
+            break;
+        case STMT_PRINT:
+            print_print(get<print_node>(stmt.statement));
+            break;
+        default:
+            break;
+        }
+    }
+};
+
+void print_assign(assign_node assign)
+{
+    cout << "ASSIGN " << assign.identifier << " to ";
+
+    print_expr(assign.expr);
+
+    cout << endl;
+};
+
+void print_expr(expr_node expr)
+{
+    if (expr.kind == UNARY_EXPR)
+    {
+        cout << (!get<term_node>(expr.expr).value.empty() ? get<term_node>(expr.expr).value : "INPUT");
+    }
+    else
+    {
+        term_node lhs, rhs;
+        lhs = get<term_binary_node>(expr.expr).lhs;
+        rhs = get<term_binary_node>(expr.expr).rhs;
+
+        cout << (!lhs.value.empty() ? lhs.value : "INPUT") << " + " << (!rhs.value.empty() ? rhs.value : "INPUT");
+    }
+};
+
+void print_goto(goto_node goto_)
+{
+    cout << "GOTO " << goto_.label << endl;
+};
+
+void print_print(print_node print)
+{
+    cout << "PRINT ";
+    switch (print.term.kind)
+    {
+    case TERM_INPUT:
+        cout << "INPUT" << endl;
+        break;
+    case TERM_IDENTIFIER:
+        cout << print.term.value << endl;
+        break;
+    case TERM_INT_LITERAL:
+        cout << print.term.value << endl;
+        break;
+    default:
+        break;
+    }
+};
+
+void print_label(label_node label)
+{
+    cout << "LABEL " << label.label << endl;
+};
+
+void print_if_then(if_then_node if_then)
+{
+    cout << "IF " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value << " < " << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " THEN" << " {" << endl;
+    struct statement_node *stmt = if_then.statement;
+    switch (stmt->kind)
+    {
+    case STMT_ASSIGN:
+        print_assign(get<assign_node>(stmt->statement));
+        break;
+    case STMT_GOTO:
+        print_goto(get<goto_node>(stmt->statement));
+        break;
+    case STMT_IF_THEN:
+        print_if_then(get<if_then_node>(stmt->statement));
+        break;
+    case STMT_LABEL:
+        print_label(get<label_node>(stmt->statement));
+        break;
+    case STMT_PRINT:
+        print_print(get<print_node>(stmt->statement));
+        break;
+    default:
+        break;
+    }
+    cout << "}" << endl;
 };
