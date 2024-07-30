@@ -1,5 +1,6 @@
 #include "lexer.h"
 #include "parser.h"
+#include "generator.h"
 #include <iostream>
 using namespace std;
 
@@ -38,5 +39,8 @@ int main()
     cout << endl;
     cout << "AST:" << endl;
     print_program(p);
+
+    Generator generator(p);
+    generator.to_asm();
     return 0;
 }
