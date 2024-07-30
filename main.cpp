@@ -11,14 +11,15 @@ int main()
     // read file here into buffer
     string buffer = read_file("example.milk");
 
-    cout << "INPUT FILE:" << endl;
+    /*cout << "INPUT FILE:" << endl;
     cout << buffer << endl
          << endl;
+    */
 
     Lexer lexer(buffer);
 
     vector<Token> tokens = lexer.tokenize();
-    // print tokens
+    /* print tokens
     cout << "LEXED FILE:" << endl;
     for (auto token : tokens)
     {
@@ -34,11 +35,12 @@ int main()
 
     cout << endl;
     cout << "PARSING FILE..." << endl;
+    */
     Parser parser(tokens);
     program_node p = parser.parse_program();
-    cout << endl;
-    cout << "AST:" << endl;
-    print_program(p);
+    // cout << endl;
+    // cout << "AST:" << endl;
+    // print_program(p);
 
     Generator generator(p);
     generator.to_asm();
