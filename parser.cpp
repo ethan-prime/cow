@@ -45,7 +45,7 @@ program_node Parser::parse_program()
         program.statements.push_back(this->parse_statement());
     };
 
-    cout << "Parsed " << program.statements.size() << " statements." << endl;
+    // cout << "Parsed " << program.statements.size() << " statements." << endl;
     return program;
 };
 

@@ -28,6 +28,7 @@ void Generator::statement_to_asm(statement_node stmt)
         goto_to_asm(get<goto_node>(stmt.statement));
         break;
     case STMT_IF_THEN:
+        if_then_to_asm(get<if_then_node>(stmt.statement));
         break;
     case STMT_LABEL:
         label_to_asm(get<label_node>(stmt.statement));
@@ -42,18 +43,20 @@ void Generator::statement_to_asm(statement_node stmt)
 // label:
 void Generator::label_to_asm(label_node label)
 {
+    this->labels.push_back(label.label);
     cout << label.label << ":" << endl;
 }
 
 // jmp <label>
 void Generator::goto_to_asm(goto_node goto_)
 {
+    if (!this->goto_valid(goto_)) exit(0);
     cout << "   jmp " << goto_.label << endl;
 }
 
 void Generator::assign_to_asm(assign_node assign)
 {
-    if (!expr_valid(assign.expr))
+    if (!this->expr_valid(assign.expr))
     {
         // can't compile because of a sem error.
         exit(0);
@@ -61,6 +64,57 @@ void Generator::assign_to_asm(assign_node assign)
     // if it's a valid assignment, make sure we store that
     // this variable is now defined.
     this->variables.push_back(assign.identifier);
+}
+
+void Generator::if_then_to_asm(if_then_node if_then)
+{
+    if (!this->comparison_valid(if_then.comparison))
+    {
+        // can't compile because of a sem error.
+        exit(0);
+    }
+}
+
+// make sure we never access any undeclared vars,
+// and add any valid variables to our variables vector.
+bool Generator::statement_valid(statement_node stmt)
+{
+    switch (stmt.kind)
+    {
+    case STMT_ASSIGN:
+        return this->expr_valid(get<assign_node>(stmt.statement).expr);
+        break;
+    case STMT_GOTO:
+        return this->goto_valid(get<goto_node>(stmt.statement));
+        return true;
+        break;
+    case STMT_IF_THEN:
+        return this->comparison_valid(get<if_then_node>(stmt.statement).comparison) && this->statement_valid(*get<if_then_node>(stmt.statement).statement);
+        break;
+    case STMT_LABEL:
+        return true;
+        break;
+    case STMT_PRINT:
+        return this->term_valid(get<print_node>(stmt.statement).term);
+        break;
+    default:
+        cout << "possible error checking if stmt is valid" << endl;
+        return false;
+        break;
+    }
+}
+
+bool Generator::comparison_valid(comparison_node comp)
+{
+    if (comp.kind == COMP_LESS_THAN)
+    {
+        return this->term_valid(get<term_binary_node>(comp.binary_expr).lhs) && this->term_valid(get<term_binary_node>(comp.binary_expr).rhs);
+    }
+    else
+    {
+        cout << "possible error checking if comparison is valid" << endl;
+        return false;
+    }
 }
 
 // checks if an expr has undefined variables (semantic errors)
@@ -96,6 +150,17 @@ bool Generator::term_valid(term_node term)
         cout << "possible error checking if term is valid" << endl;
         return false;
     }
+}
+
+bool Generator::goto_valid(goto_node goto_)
+{
+    for (auto l : this->labels)
+    {
+        if (l == goto_.label)
+            return true;
+    }
+    cout << "SEMANTIC ERROR: label \"" << goto_.label << "\" is not defined." << endl;
+    return false;
 }
 
 // check if a variable is defined
