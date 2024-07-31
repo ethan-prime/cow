@@ -10,6 +10,7 @@ private:
     // helps check for any semantic errors.
     vector<string> variables;
     vector<string> labels;
+    unsigned int current_if_index;
 
 public:
     // constructor
@@ -27,8 +28,13 @@ public:
     void goto_to_asm(goto_node goto_);
     void assign_to_asm(assign_node assign);
     void if_then_to_asm(if_then_node if_then);
+    void expr_to_asm(expr_node expr);
+    void comparison_to_asm(comparison_node comp);
+    void term_to_asm(term_node term);
 
     // HELPERS
+
+    int variable_index(string var);
 
     void collect_variables();
     void collect_labels();

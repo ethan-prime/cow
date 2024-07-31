@@ -5,13 +5,15 @@
 using namespace std;
 
 // constructor
-Generator::Generator(program_node program) : program(program) {};
+Generator::Generator(program_node program) : program(program), current_if_index(0) {};
 
 // generates x86 assembly instructions based on program_node/AST.
 void Generator::to_asm()
 {
     this->collect_variables();
     this->collect_labels();
+    // setup stack frame
+    cout << "   mov %rbp, %rsp" << endl;
     // allocate memory for variables on the stack
     cout << "   sub $" << this->variables.size() * 8 << ", %rsp" << endl;
     for (statement_node stmt : this->program.statements)
@@ -60,6 +62,12 @@ void Generator::goto_to_asm(goto_node goto_)
 
 void Generator::assign_to_asm(assign_node assign)
 {
+    // we assume that the result of the expr is in %rax.
+    expr_to_asm(assign.expr);
+
+    int index = this->variable_index(assign.identifier);
+    // store variable at %rsp + index*8
+    cout << "   movq %rax, -" << index * 8 + 8 << "(%rbp)" << endl;
 }
 
 void Generator::if_then_to_asm(if_then_node if_then)
@@ -69,6 +77,20 @@ void Generator::if_then_to_asm(if_then_node if_then)
         // can't compile because of a sem error.
         exit(0);
     }
+    // we assume that the result of the comparison is in %rax.
+    comparison_to_asm(if_then.comparison);
+
+    cout << "   test %rax, %rax" << endl; // see if %rax is 0
+    // if %rax is 0, the condition is true, so we should skip to after
+    // the then statement.
+    cout << "   jz .ENDIF" << this->current_if_index << endl;
+    int endif = this->current_if_index;
+    this->current_if_index++;
+
+    // this code will run if the jz instruction doesn't execute
+    // (if the comparison evaluates to true)
+    statement_to_asm(*if_then.statement);
+    cout << ".ENDIF" << endif << ":" << endl;
 }
 
 // make sure we never access any undeclared vars,
@@ -215,4 +237,81 @@ bool in_vector(vector<T> vec, T value)
             return true;
     }
     return false;
+}
+
+int Generator::variable_index(string var)
+{
+    for (unsigned int i = 0; i < this->variables.size(); i++)
+    {
+        if (this->variables[i] == var)
+            return i;
+    }
+    // not found
+    return -1;
+}
+
+void Generator::expr_to_asm(expr_node expr)
+{
+    if (expr.kind == UNARY_EXPR)
+    {
+        term_to_asm(get<term_node>(expr.expr));
+        // result is already in %rax.
+    }
+    else if (expr.kind == BINARY_EXPR_PLUS)
+    {
+        term_binary_node binary_expr = get<term_binary_node>(expr.expr);
+        term_to_asm(binary_expr.lhs);
+        // assume lhs result in %rax. let's store in %rcx for now.
+        cout << "   mov %rax, %rcx" << endl;
+        term_to_asm(binary_expr.rhs);
+        // now we have to add them
+        cout << "   addq %rcx, %rax" << endl;
+        // notice result is in %rax.
+    }
+}
+
+void Generator::term_to_asm(term_node term)
+{
+    // we need to store the result in %rax.
+    if (term.kind == TERM_IDENTIFIER)
+    {
+        // get its value, load from its index!
+        unsigned int index = this->variable_index(term.value);
+        cout << "   movq -" << index * 8 + 8 << "(%rbp)" << ", %rax" << endl;
+    }
+    else if (term.kind == TERM_INT_LITERAL)
+    {
+        cout << "   movq $" << term.value << ", %rax" << endl;
+        return;
+    }
+    else if (term.kind == TERM_INPUT)
+    {
+        // TODO!
+    }
+    else
+    {
+        return;
+    }
+}
+
+void Generator::comparison_to_asm(comparison_node comp)
+{
+    // we need to store in %rax.
+    if (comp.kind == COMP_LESS_THAN)
+    {
+        term_binary_node binary_expr = get<term_binary_node>(comp.binary_expr);
+        term_node lhs = binary_expr.lhs;
+        term_to_asm(lhs);
+        // lhs is in %rax -> store temp in %rcx.
+        cout << "   mov %rax, %rcx" << endl;
+        term_node rhs = binary_expr.rhs;
+        term_to_asm(rhs);
+        // rhs is in %rax, so lets compare now.
+        cout << "   cmpq %rax, %rcx" << endl;
+        // if res is less than 0, we know lhs < rhs,
+        // so put a 1 in %rax or else %rax should be 0.
+        cout << "   setl %al" << endl;
+        // put it in %rax with zero extend
+        cout << "   movzbq %al, %rax" << endl;
+    }
 }
