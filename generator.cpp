@@ -10,6 +10,10 @@ Generator::Generator(program_node program) : program(program) {};
 // generates x86 assembly instructions based on program_node/AST.
 void Generator::to_asm()
 {
+    this->collect_variables();
+    this->collect_labels();
+    // allocate memory for variables on the stack
+    cout << "   sub $" << this->variables.size() * 8 << ", %rsp" << endl;
     for (statement_node stmt : this->program.statements)
     {
         this->statement_to_asm(stmt);
@@ -43,32 +47,24 @@ void Generator::statement_to_asm(statement_node stmt)
 // label:
 void Generator::label_to_asm(label_node label)
 {
-    this->labels.push_back(label.label);
     cout << label.label << ":" << endl;
 }
 
 // jmp <label>
 void Generator::goto_to_asm(goto_node goto_)
 {
-    if (!this->goto_valid(goto_)) exit(0);
+    if (!this->goto_valid(goto_))
+        exit(0);
     cout << "   jmp " << goto_.label << endl;
 }
 
 void Generator::assign_to_asm(assign_node assign)
 {
-    if (!this->expr_valid(assign.expr))
-    {
-        // can't compile because of a sem error.
-        exit(0);
-    }
-    // if it's a valid assignment, make sure we store that
-    // this variable is now defined.
-    this->variables.push_back(assign.identifier);
 }
 
 void Generator::if_then_to_asm(if_then_node if_then)
 {
-    if (!this->comparison_valid(if_then.comparison))
+    if (!this->comparison_valid(if_then.comparison) || !this->statement_valid(*if_then.statement))
     {
         // can't compile because of a sem error.
         exit(0);
@@ -172,5 +168,51 @@ bool Generator::is_defined(string var)
             return true;
     }
     cout << "SEMANTIC ERROR: variable \"" << var << "\" is not defined." << endl;
+    return false;
+}
+
+void Generator::collect_variables()
+{
+    for (auto stmt : this->program.statements)
+    {
+        if (stmt.kind == STMT_ASSIGN)
+        {
+            assign_node assign = get<assign_node>(stmt.statement);
+            if (!this->expr_valid(assign.expr))
+            {
+                // can't compile because of a sem error.
+                exit(0);
+            }
+            // if it's a valid ssignment, make sure we store that
+            // this variable isa now defined.
+            if (!in_vector(this->variables, assign.identifier))
+                this->variables.push_back(assign.identifier);
+        }
+    }
+}
+
+void Generator::collect_labels()
+{
+    for (auto stmt : this->program.statements)
+    {
+        if (stmt.kind == STMT_LABEL)
+        {
+            label_node label = get<label_node>(stmt.statement);
+            // if it's a valid ssignment, make sure we store that
+            // this variable isa now defined.
+            if (!in_vector(this->labels, label.label))
+                this->labels.push_back(label.label);
+        }
+    }
+}
+
+template <typename T>
+bool in_vector(vector<T> vec, T value)
+{
+    for (auto v : vec)
+    {
+        if (v == value)
+            return true;
+    }
     return false;
 }

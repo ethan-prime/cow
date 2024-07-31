@@ -30,6 +30,9 @@ public:
 
     // HELPERS
 
+    void collect_variables();
+    void collect_labels();
+
     bool statement_valid(statement_node stmt);
     bool comparison_valid(comparison_node comp);
     bool goto_valid(goto_node goto_);
@@ -41,3 +44,6 @@ public:
     bool term_valid(term_node term);
     bool is_defined(string var);
 };
+
+template <typename T>
+bool in_vector(vector<T> vec, T value);
