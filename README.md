@@ -74,3 +74,5 @@ int_to_ascii:
    ret
 
 ```
+
+Special thanks to (Alex)[https://github.com/alexjercan] and his YouTube tutorial for a lot of guidance on this project. Go check him out :)
