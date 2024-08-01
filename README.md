@@ -7,12 +7,14 @@
 example.milk:
 ```
 ```
-a = 1
-:loop
-print a
+a = input
 a = a + 1
-if a < 101 then
-goto :loop
+i = 1
+:loop
+print i
+i = i + 1
+if i < a then goto :loop
+print 420
 ```
 
 ```
@@ -24,29 +26,50 @@ goto :loop
 .globl _start
 _start:
    mov %rsp, %rbp
-   sub $8, %rsp
-   movq $1, %rax
+   sub $16, %rsp
+   sub $24, %rsp
+   mov %rbp, %rsi
+   addq $16, %rsi
+   movq $0, %rax
+   movq $0, %rdi
+   movq $24, %rdx
+   syscall
+   mov %rax, %rcx
+   subq $1, %rcx
+   mov %rsi, %r9
+   addq %rcx, %r9
+   subq $1, %r9
+   movq $1, %rbx
+   xor %r8, %r8
+   call ascii_to_int
    movq %rax, -8(%rbp)
-loop:
    movq -8(%rbp), %rax
+   mov %rax, %rcx
+   movq $1, %rax
+   addq %rcx, %rax
+   movq %rax, -8(%rbp)
+   movq $1, %rax
+   movq %rax, -16(%rbp)
+loop:
+   movq -16(%rbp), %rax
    movq $1, %rsi
    sub $24, %rsp
    mov %rbp, %rcx
-   addq $31, %rcx
+   addq $39, %rcx
    movq $0x0A, (%rcx)
    dec %rcx
    call int_to_ascii
    movq $1, %rax
    movq $1, %rdi
    syscall
-   movq -8(%rbp), %rax
+   movq -16(%rbp), %rax
    mov %rax, %rcx
    movq $1, %rax
    addq %rcx, %rax
-   movq %rax, -8(%rbp)
-   movq -8(%rbp), %rax
+   movq %rax, -16(%rbp)
+   movq -16(%rbp), %rax
    mov %rax, %rcx
-   movq $101, %rax
+   movq -8(%rbp), %rax
    cmpq %rax, %rcx
    setl %al
    movzbq %al, %rax
@@ -54,6 +77,17 @@ loop:
    jz .ENDIF0
    jmp loop
 .ENDIF0:
+   movq $420, %rax
+   movq $1, %rsi
+   sub $24, %rsp
+   mov %rbp, %rcx
+   addq $63, %rcx
+   movq $0x0A, (%rcx)
+   dec %rcx
+   call int_to_ascii
+   movq $1, %rax
+   movq $1, %rdi
+   syscall
    movq $60, %rax
    xor %rdi, %rdi
    syscall
@@ -73,6 +107,23 @@ int_to_ascii:
    mov %rcx, %rsi
    ret
 
+ascii_to_int:
+   movb (%r9), %al
+   movzbq %al, %rax
+   sub $48, %rax
+   mul %rbx
+   add %rax, %r8
+   mov %rbx, %rax
+   mov $10, %rbx
+   mul %rbx
+   mov %rax, %rbx
+   dec %rcx
+   dec %r9
+   test %rcx, %rcx
+   jnz ascii_to_int
+   inc %r9
+   mov %r8, %rax
+   ret
 ```
 
 Special thanks to [Alex](https://github.com/alexjercan) and his [YouTube tutorial](https://youtu.be/HOe2YFnzO2I?si=u_QlAn2AdSL3jNtR) for a lot of guidance on this project. Go check him out :)
