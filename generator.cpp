@@ -29,6 +29,23 @@ void Generator::to_asm()
     cout << "   movq $60, %rax" << endl;
     cout << "   xor %rdi, %rdi" << endl;
     cout << "   syscall" << endl;
+
+    // predefined functions
+    cout << endl;
+    cout << "int_to_ascii:" << endl;
+    cout << "   movq $10, %rbx" << endl;
+    cout << "   xor %rdx, %rdx" << endl;
+    cout << "   div %rbx" << endl;
+    cout << "   add $48, %dl" << endl;
+    cout << "   movb %dl, (%rcx)" << endl;
+    cout << "   inc %rsi" << endl;
+    cout << "   dec %rcx" << endl;
+    cout << "   test %rax, %rax" << endl;
+    cout << "   jnz int_to_ascii" << endl;
+    cout << "   inc %rcx" << endl;
+    cout << "   mov %rsi, %rdx" << endl;
+    cout << "   mov %rcx, %rsi" << endl;
+    cout << "   ret" << endl;
 }
 
 // generates x86 assmebly for a statement
@@ -340,9 +357,19 @@ void Generator::print_to_asm(print_node print)
     // to store our buffer
 
     // preparation for call to int_to_ascii
+    cout << "   movq $1, %rsi" << endl; // we have to print at least a \n
     cout << "   sub $24, %rsp" << endl;
     cout << "   mov %rbp, %rcx" << endl;
     cout << "   addq $" << this->buffer_ptr + 23 << ", %rcx" << endl;
+    cout << "   movq $0x0A, (%rcx)" << endl; // newline character at end of str
+    cout << "   dec %rcx" << endl;
     cout << "   call int_to_ascii" << endl;
     // sys_write: %rax = 1; %rdi = unsigned int fd; %rsi = const char *buf; %rdx = size_t count;
+
+    // now we assume that our buffer ptr is in %rsi and the length is in %rdx.
+    // time for a syscall
+
+    cout << "   movq $1, %rax" << endl;
+    cout << "   movq $1, %rdi" << endl;
+    cout << "   syscall" << endl;
 }
