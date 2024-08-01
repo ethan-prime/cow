@@ -26,6 +26,7 @@ void Generator::to_asm()
     {
         this->statement_to_asm(stmt);
     }
+    cout << ".exit:" << endl;
     cout << "   movq $60, %rax" << endl;
     cout << "   xor %rdi, %rdi" << endl;
     cout << "   syscall" << endl;

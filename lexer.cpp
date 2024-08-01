@@ -1,6 +1,9 @@
 #include "lexer.h"
 #include <sstream>
 #include <fstream>
+#include <iostream>
+
+using namespace std;
 
 // constructor
 Lexer::Lexer(const string &buffer) : buffer(buffer), pos(0), read_pos(0), line_number(1), current_char(0)
@@ -95,6 +98,21 @@ Token Lexer::next_token()
     {
         this->read();
         return Token(OP_PLUS, "", this->line_number);
+    }
+    else if (this->current_char == '-')
+    {
+        this->read();
+        return Token(OP_MINUS, "", this->line_number);
+    }
+    else if (this->current_char == '*')
+    {
+        this->read();
+        return Token(OP_MULT, "", this->line_number);
+    }
+    else if (this->current_char == '/')
+    {
+        this->read();
+        return Token(OP_DIV, "", this->line_number);
     }
     // add support for == soon !
     else if (this->current_char == '=')
@@ -191,4 +209,21 @@ string read_file(const string &filename)
     std::stringstream buffer;
     buffer << file.rdbuf(); // Read the file content into the stringstream
     return buffer.str();
+}
+
+void print_tokens(vector<Token> &tokens)
+{
+    for (auto token : tokens)
+    {
+        {
+            if (token.value != "")
+            {
+                cout << token.repr() << " (" << token.value << ") @ line " << token.line_number << endl;
+            }
+            else
+            {
+                cout << token.repr() << " @ line " << token.line_number << endl;
+            }
+        }
+    }
 }

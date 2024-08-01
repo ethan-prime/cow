@@ -35,6 +35,12 @@ string Token::repr()
         return "invalid";
     case END_OF_FILE:
         return "eof";
+    case OP_MINUS:
+        return "op_minus";
+    case OP_MULT:
+        return "op_mult";
+    case OP_DIV:
+        return "op_div";
     default:
         return "moo! something went wrong when tokenizing...";
     }

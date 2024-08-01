@@ -10,6 +10,7 @@ int main()
     Lexer lexer(buffer);
 
     vector<Token> tokens = lexer.tokenize();
+    // print_tokens(tokens);
 
     Parser parser(tokens);
     program_node p = parser.parse_program();

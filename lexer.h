@@ -40,3 +40,5 @@ bool is_keyword(const string &buf, token_type &kind);
 
 // reads contents of file into &buf.
 string read_file(const string &filename);
+
+void print_tokens(vector<Token> &tokens);
