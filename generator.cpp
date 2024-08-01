@@ -46,6 +46,25 @@ void Generator::to_asm()
     cout << "   mov %rsi, %rdx" << endl;
     cout << "   mov %rcx, %rsi" << endl;
     cout << "   ret" << endl;
+
+    cout << endl;
+    cout << "ascii_to_int:" << endl;
+    cout << "   movb (%r9), %al" << endl;
+    cout << "   movzbq %al, %rax" << endl;
+    cout << "   sub $48, %rax" << endl;
+    cout << "   mul %rbx" << endl;
+    cout << "   add %rax, %r8" << endl;
+    cout << "   mov %rbx, %rax" << endl;
+    cout << "   mov $10, %rbx" << endl;
+    cout << "   mul %rbx" << endl;
+    cout << "   mov %rax, %rbx" << endl;
+    cout << "   dec %rcx" << endl;
+    cout << "   dec %r9" << endl;
+    cout << "   test %rcx, %rcx" << endl;
+    cout << "   jnz ascii_to_int" << endl;
+    cout << "   inc %r9" << endl;
+    cout << "   mov %r8, %rax" << endl;
+    cout << "   ret" << endl;
 }
 
 // generates x86 assmebly for a statement
@@ -298,6 +317,31 @@ void Generator::expr_to_asm(expr_node expr)
     }
 }
 
+void Generator::input_to_asm(term_node term)
+{
+    // we need to allocate space for the input
+    cout << "   sub $24, %rsp" << endl;
+    cout << "   mov %rbp, %rsi" << endl;
+    cout << "   addq $" << this->buffer_ptr << ", %rsi" << endl;
+    cout << "   movq $0, %rax" << endl;
+    cout << "   movq $0, %rdi" << endl;
+    cout << "   movq $24, %rdx" << endl;
+    cout << "   syscall" << endl;
+
+    // now, the number of bytes read in should be in %rax.
+    // + setup for call to ascii_to_int
+    cout << "   mov %rax, %rcx" << endl;
+    cout << "   subq $1, %rcx" << endl;
+    cout << "   mov %rsi, %r9" << endl;
+    cout << "   addq %rcx, %r9" << endl;
+    cout << "   subq $1, %r9" << endl;
+
+    cout << "   movq $1, %rbx" << endl;
+    cout << "   xor %r8, %r8" << endl;
+    cout << "   call ascii_to_int" << endl;
+    // input value is now in %rax.
+}
+
 void Generator::term_to_asm(term_node term)
 {
     // we need to store the result in %rax.
@@ -314,7 +358,7 @@ void Generator::term_to_asm(term_node term)
     }
     else if (term.kind == TERM_INPUT)
     {
-        // TODO!
+        input_to_asm(term);
     }
     else
     {
@@ -364,6 +408,8 @@ void Generator::print_to_asm(print_node print)
     cout << "   movq $0x0A, (%rcx)" << endl; // newline character at end of str
     cout << "   dec %rcx" << endl;
     cout << "   call int_to_ascii" << endl;
+
+    this->buffer_ptr += 24;
     // sys_write: %rax = 1; %rdi = unsigned int fd; %rsi = const char *buf; %rdx = size_t count;
 
     // now we assume that our buffer ptr is in %rsi and the length is in %rdx.

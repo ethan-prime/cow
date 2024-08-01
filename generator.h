@@ -33,6 +33,7 @@ public:
     void expr_to_asm(expr_node expr);
     void comparison_to_asm(comparison_node comp);
     void term_to_asm(term_node term);
+    void input_to_asm(term_node term);
 
     // HELPERS
 
