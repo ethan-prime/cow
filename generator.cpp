@@ -12,14 +12,23 @@ void Generator::to_asm()
 {
     this->collect_variables();
     this->collect_labels();
+
+    // INITIAL SETUP
+    cout << ".section .text" << endl;
+    cout << ".globl _start" << endl;
+    cout << "_start:" << endl;
+
     // setup stack frame
-    cout << "   mov %rbp, %rsp" << endl;
+    cout << "   mov %rsp, %rbp" << endl;
     // allocate memory for variables on the stack
     cout << "   sub $" << this->variables.size() * 8 << ", %rsp" << endl;
     for (statement_node stmt : this->program.statements)
     {
         this->statement_to_asm(stmt);
     }
+    cout << "   movq $60, %rax" << endl;
+    cout << "   xor %rdi, %rdi" << endl;
+    cout << "   syscall" << endl;
 }
 
 // generates x86 assmebly for a statement
@@ -40,6 +49,7 @@ void Generator::statement_to_asm(statement_node stmt)
         label_to_asm(get<label_node>(stmt.statement));
         break;
     case STMT_PRINT:
+        print_to_asm(get<print_node>(stmt.statement));
         break;
     default:
         break;
@@ -211,6 +221,7 @@ void Generator::collect_variables()
                 this->variables.push_back(assign.identifier);
         }
     }
+    this->buffer_ptr = this->variables.size() * 8;
 }
 
 void Generator::collect_labels()
@@ -314,4 +325,24 @@ void Generator::comparison_to_asm(comparison_node comp)
         // put it in %rax with zero extend
         cout << "   movzbq %al, %rax" << endl;
     }
+}
+
+void Generator::print_to_asm(print_node print)
+{
+    // get term that must be printed
+    term_to_asm(print.term);
+
+    // assume result is in %rax.
+    // however, it is an actual integer but we
+    // need to print ASCII codes.
+
+    // now, we have to allocate memory on the stack
+    // to store our buffer
+
+    // preparation for call to int_to_ascii
+    cout << "   sub $24, %rsp" << endl;
+    cout << "   mov %rbp, %rcx" << endl;
+    cout << "   addq $" << this->buffer_ptr + 23 << ", %rcx" << endl;
+    cout << "   call int_to_ascii" << endl;
+    // sys_write: %rax = 1; %rdi = unsigned int fd; %rsi = const char *buf; %rdx = size_t count;
 }

@@ -2,3 +2,8 @@ a.exe
 compile.txt
 example.milk
 todo.txt
+.gdb_history
+example.s
+*.out
+*.s
+*.o
