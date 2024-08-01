@@ -189,7 +189,7 @@ bool Generator::expr_valid(expr_node expr)
     {
         return this->term_valid(get<term_node>(expr.expr));
     }
-    else if (expr.kind == BINARY_EXPR_PLUS)
+    else if (expr.kind == BINARY_EXPR_PLUS || expr.kind == BINARY_EXPR_MINUS || expr.kind == BINARY_EXPR_MULT || expr.kind == BINARY_EXPR_DIV)
     {
         return this->term_valid(get<term_binary_node>(expr.expr).lhs) && this->term_valid(get<term_binary_node>(expr.expr).rhs);
     }
@@ -315,6 +315,38 @@ void Generator::expr_to_asm(expr_node expr)
         // now we have to add them
         cout << "   addq %rcx, %rax" << endl;
         // notice result is in %rax.
+    }
+    else if (expr.kind == BINARY_EXPR_MINUS)
+    {
+        term_binary_node binary_expr = get<term_binary_node>(expr.expr);
+        term_to_asm(binary_expr.rhs);
+        // assume rhs result in %rax. let's store in %rcx for now.
+        cout << "   mov %rax, %rcx" << endl;
+        term_to_asm(binary_expr.lhs);
+        // now we have to subtract them
+        cout << "   subq %rcx, %rax" << endl;
+        // notice result is in %rax.
+    }
+    else if (expr.kind == BINARY_EXPR_MULT)
+    {
+        term_binary_node binary_expr = get<term_binary_node>(expr.expr);
+        term_to_asm(binary_expr.lhs);
+        // assume lhs result in %rax. let's store in %rcx for now.
+        cout << "   mov %rax, %rcx" << endl;
+        term_to_asm(binary_expr.rhs);
+        // now we have to multiply them
+        cout << "   mul %rcx" << endl;
+    }
+    else if (expr.kind == BINARY_EXPR_DIV)
+    {
+        term_binary_node binary_expr = get<term_binary_node>(expr.expr);
+        term_to_asm(binary_expr.rhs);
+        // assume rhs result (divisor) in %rax. let's store in %rcx for now.
+        cout << "   mov %rax, %rcx" << endl;
+        term_to_asm(binary_expr.lhs);
+        // now we have to multiply them
+        cout << "   xor %rdx, %rdx" << endl; // clear for div instr
+        cout << "   div %rcx" << endl;
     }
 }
 

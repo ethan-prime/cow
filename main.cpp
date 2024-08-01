@@ -14,6 +14,7 @@ int main()
 
     Parser parser(tokens);
     program_node p = parser.parse_program();
+    // print_program(p);
 
     Generator generator(p);
     generator.to_asm();

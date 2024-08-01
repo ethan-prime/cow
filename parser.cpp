@@ -122,11 +122,36 @@ expr_node Parser::parse_expr()
 
     if (this->current_token().kind == OP_PLUS)
     {
+        cout << "FART" << endl;
         this->advance();
         rhs = this->parse_term();
 
         expr.expr = term_binary_node{lhs, rhs};
         expr.kind = BINARY_EXPR_PLUS;
+    }
+    else if (this->current_token().kind == OP_MINUS)
+    {
+        this->advance();
+        rhs = this->parse_term();
+
+        expr.expr = term_binary_node{lhs, rhs};
+        expr.kind = BINARY_EXPR_MINUS;
+    }
+    else if (this->current_token().kind == OP_MULT)
+    {
+        this->advance();
+        rhs = this->parse_term();
+
+        expr.expr = term_binary_node{lhs, rhs};
+        expr.kind = BINARY_EXPR_MULT;
+    }
+    else if (this->current_token().kind == OP_DIV)
+    {
+        this->advance();
+        rhs = this->parse_term();
+
+        expr.expr = term_binary_node{lhs, rhs};
+        expr.kind = BINARY_EXPR_DIV;
     }
     else
     {
@@ -320,13 +345,41 @@ void print_expr(expr_node expr)
     {
         cout << (!get<term_node>(expr.expr).value.empty() ? get<term_node>(expr.expr).value : "INPUT");
     }
-    else
+    else if (expr.kind == BINARY_EXPR_PLUS)
     {
         term_node lhs, rhs;
         lhs = get<term_binary_node>(expr.expr).lhs;
         rhs = get<term_binary_node>(expr.expr).rhs;
 
         cout << (!lhs.value.empty() ? lhs.value : "INPUT") << " + " << (!rhs.value.empty() ? rhs.value : "INPUT");
+    }
+    else if (expr.kind == BINARY_EXPR_MINUS)
+    {
+        term_node lhs, rhs;
+        lhs = get<term_binary_node>(expr.expr).lhs;
+        rhs = get<term_binary_node>(expr.expr).rhs;
+
+        cout << (!lhs.value.empty() ? lhs.value : "INPUT") << " - " << (!rhs.value.empty() ? rhs.value : "INPUT");
+    }
+    else if (expr.kind == BINARY_EXPR_MULT)
+    {
+        term_node lhs, rhs;
+        lhs = get<term_binary_node>(expr.expr).lhs;
+        rhs = get<term_binary_node>(expr.expr).rhs;
+
+        cout << (!lhs.value.empty() ? lhs.value : "INPUT") << " * " << (!rhs.value.empty() ? rhs.value : "INPUT");
+    }
+    else if (expr.kind == BINARY_EXPR_DIV)
+    {
+        term_node lhs, rhs;
+        lhs = get<term_binary_node>(expr.expr).lhs;
+        rhs = get<term_binary_node>(expr.expr).rhs;
+
+        cout << (!lhs.value.empty() ? lhs.value : "INPUT") << " / " << (!rhs.value.empty() ? rhs.value : "INPUT");
+    }
+    else
+    {
+        cout << "error printing prgm" << endl;
     }
 };
 
