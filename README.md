@@ -140,7 +140,7 @@ ascii_to_int:
 ```
 
 ```
-After linking and excuting, stdout reads:
+After assembling, linking, and executing, stdout reads:
 
 100
 2
