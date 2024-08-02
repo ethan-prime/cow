@@ -1,8 +1,8 @@
 <term> ::= <identifier> | <int_literal> | 'input'
 <expr> ::= <term> | <term> <arithmetic_op> <term>
-<arithmetic_op> ::= '+' | '-' | '*' | '/'
+<arithmetic_op> ::= '+' | '-' | '*' | '/' | '**' | '%'
 <comparison> ::= <term> <comparison_op> <term>
-<comparison_op> ::= '<' | '=='
+<comparison_op> ::= '<' | '>' | '=='
 <assignment> ::= <identifier> = <expr>
 <statement> ::= <assignment> | 'if' <comparison> 'then' <statement> | 'goto' <label> | 'print' <term> | <label>
 <label> ::= ':' <str_literal>
