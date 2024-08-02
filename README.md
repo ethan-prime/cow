@@ -41,6 +41,8 @@ goto :getsqrtloop
 
 ```
 ./leather prime.milk
+gcc -c prime.s -o prime.o
+ld prime.o -o prime
 complies to...
 ```
 
