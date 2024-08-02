@@ -21,6 +21,7 @@ enum token_type
     OP_MULT,
     OP_DIV,
     OP_MOD, // %
+    OP_EXPONENT,
     LABEL,
     EQUAL,      // =
     EQUALEQUAL, // ==

@@ -7,3 +7,4 @@ example.s
 *.out
 *.s
 *.o
+*.milk

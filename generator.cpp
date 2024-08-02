@@ -80,6 +80,16 @@ void Generator::to_asm()
     file << "   mov %r8, %rax" << endl;
     file << "   ret" << endl;
 
+    file << endl;
+    file << "exp:" << endl;
+    file << "   test %rbx, %rbx" << endl;
+    file << "   jz .endexp" << endl;
+    file << "   mul %rcx" << endl;
+    file << "   dec %rbx" << endl;
+    file << "   jmp exp" << endl;
+    file << ".endexp:" << endl;
+    file << "   ret" << endl;
+
     file.close();
 }
 
@@ -204,7 +214,7 @@ bool Generator::expr_valid(expr_node expr)
     {
         return this->term_valid(get<term_node>(expr.expr));
     }
-    else if (expr.kind == BINARY_EXPR_PLUS || expr.kind == BINARY_EXPR_MINUS || expr.kind == BINARY_EXPR_MULT || expr.kind == BINARY_EXPR_DIV || expr.kind == BINARY_EXPR_MOD)
+    else if (expr.kind == BINARY_EXPR_PLUS || expr.kind == BINARY_EXPR_MINUS || expr.kind == BINARY_EXPR_MULT || expr.kind == BINARY_EXPR_DIV || expr.kind == BINARY_EXPR_MOD || expr.kind == BINARY_EXPR_EXP)
     {
         return this->term_valid(get<term_binary_node>(expr.expr).lhs) && this->term_valid(get<term_binary_node>(expr.expr).rhs);
     }
@@ -375,6 +385,19 @@ void Generator::expr_to_asm(expr_node expr)
         file << "   div %rcx" << endl;
         // the remainder is in %rdx, move to %rax.
         file << "   mov %rdx, %rax" << endl;
+    }
+    else if (expr.kind == BINARY_EXPR_EXP)
+    {
+        term_binary_node binary_expr = get<term_binary_node>(expr.expr);
+        term_to_asm(binary_expr.lhs);
+        // lhs is base, store in %rcx for now
+        file << "   mov %rax, %rcx" << endl;
+        term_to_asm(binary_expr.rhs);
+        // rhs is exponent, store in %rbx
+        file << "   mov %rax, %rbx" << endl;
+        // perform exponentiation with result in %rax
+        file << "   movq $1, %rax" << endl;
+        file << "   call exp" << endl;
     }
 }
 

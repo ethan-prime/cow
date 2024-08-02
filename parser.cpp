@@ -160,6 +160,14 @@ expr_node Parser::parse_expr()
         expr.expr = term_binary_node{lhs, rhs};
         expr.kind = BINARY_EXPR_MOD;
     }
+    else if (this->current_token().kind == OP_EXPONENT)
+    {
+        this->advance();
+        rhs = this->parse_term();
+
+        expr.expr = term_binary_node{lhs, rhs};
+        expr.kind = BINARY_EXPR_EXP;
+    }
     else
     {
         // unary expr
@@ -401,6 +409,14 @@ void print_expr(expr_node expr)
         rhs = get<term_binary_node>(expr.expr).rhs;
 
         cout << (!lhs.value.empty() ? lhs.value : "INPUT") << " % " << (!rhs.value.empty() ? rhs.value : "INPUT");
+    }
+    else if (expr.kind == BINARY_EXPR_EXP)
+    {
+        term_node lhs, rhs;
+        lhs = get<term_binary_node>(expr.expr).lhs;
+        rhs = get<term_binary_node>(expr.expr).rhs;
+
+        cout << (!lhs.value.empty() ? lhs.value : "INPUT") << " ** " << (!rhs.value.empty() ? rhs.value : "INPUT");
     }
     else
     {

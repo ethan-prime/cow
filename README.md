@@ -10,21 +10,31 @@ prime.milk: prints all prime numbers up to n which is given as input.
 ```c
 n = input
 i = 1
+sqrt = 2
 
 :loop
 i = i + 1
 if i > n then goto :end
-goto :isprime
+goto :getsqrt
 
 :isprime
 j = 2
 :isprimeloop
-if j == i then print i
-if j == i then goto :loop
+if j == sqrt then print i
+if j == sqrt then goto :loop
 remainder = i % j
 if remainder == 0 then goto :loop
 j = j + 1
 goto :isprimeloop
+
+:getsqrt
+k = 1
+:getsqrtloop
+square = k ** 2
+if square > i then sqrt = k
+if square > i then goto :isprime
+k = k + 1
+goto :getsqrtloop
 
 :end
 ```
@@ -39,10 +49,10 @@ complies to...
 .globl _start
 _start:
    mov %rsp, %rbp
-   sub $32, %rsp
+   sub $56, %rsp
    sub $24, %rsp
    mov %rbp, %rsi
-   addq $32, %rsi
+   addq $56, %rsi
    movq $0, %rax
    movq $0, %rdi
    movq $24, %rdx
@@ -58,6 +68,8 @@ _start:
    movq %rax, -8(%rbp)
    movq $1, %rax
    movq %rax, -16(%rbp)
+   movq $2, %rax
+   movq %rax, -24(%rbp)
 loop:
    movq -16(%rbp), %rax
    mov %rax, %rcx
@@ -74,66 +86,20 @@ loop:
    jz .ENDIF0
    jmp end
 .ENDIF0:
-   jmp isprime
+   jmp getsqrt
 isprime:
    movq $2, %rax
-   movq %rax, -24(%rbp)
+   movq %rax, -32(%rbp)
 isprimeloop:
-   movq -24(%rbp), %rax
+   movq -32(%rbp), %rax
    mov %rax, %rcx
-   movq -16(%rbp), %rax
+   movq -24(%rbp), %rax
    cmpq %rcx, %rax
    sete %al
    movzbq %al, %rax
    test %rax, %rax
    jz .ENDIF1
    movq -16(%rbp), %rax
-   movq $1, %rsi
-   sub $24, %rsp
-   mov %rbp, %rcx
-   addq $55, %rcx
-   movq $0x0A, (%rcx)
-   dec %rcx
-   call int_to_ascii
-   movq $1, %rax
-   movq $1, %rdi
-   syscall
-.ENDIF1:
-   movq -24(%rbp), %rax
-   mov %rax, %rcx
-   movq -16(%rbp), %rax
-   cmpq %rcx, %rax
-   sete %al
-   movzbq %al, %rax
-   test %rax, %rax
-   jz .ENDIF2
-   jmp loop
-.ENDIF2:
-   movq -24(%rbp), %rax
-   mov %rax, %rcx
-   movq -16(%rbp), %rax
-   xor %rdx, %rdx
-   div %rcx
-   mov %rdx, %rax
-   movq %rax, -32(%rbp)
-   movq -32(%rbp), %rax
-   mov %rax, %rcx
-   movq $0, %rax
-   cmpq %rcx, %rax
-   sete %al
-   movzbq %al, %rax
-   test %rax, %rax
-   jz .ENDIF3
-   jmp loop
-.ENDIF3:
-   movq -24(%rbp), %rax
-   mov %rax, %rcx
-   movq $1, %rax
-   addq %rcx, %rax
-   movq %rax, -24(%rbp)
-   jmp isprimeloop
-end:
-   movq $69, %rax
    movq $1, %rsi
    sub $24, %rsp
    mov %rbp, %rcx
@@ -144,6 +110,79 @@ end:
    movq $1, %rax
    movq $1, %rdi
    syscall
+.ENDIF1:
+   movq -32(%rbp), %rax
+   mov %rax, %rcx
+   movq -24(%rbp), %rax
+   cmpq %rcx, %rax
+   sete %al
+   movzbq %al, %rax
+   test %rax, %rax
+   jz .ENDIF2
+   jmp loop
+.ENDIF2:
+   movq -32(%rbp), %rax
+   mov %rax, %rcx
+   movq -16(%rbp), %rax
+   xor %rdx, %rdx
+   div %rcx
+   mov %rdx, %rax
+   movq %rax, -40(%rbp)
+   movq -40(%rbp), %rax
+   mov %rax, %rcx
+   movq $0, %rax
+   cmpq %rcx, %rax
+   sete %al
+   movzbq %al, %rax
+   test %rax, %rax
+   jz .ENDIF3
+   jmp loop
+.ENDIF3:
+   movq -32(%rbp), %rax
+   mov %rax, %rcx
+   movq $1, %rax
+   addq %rcx, %rax
+   movq %rax, -32(%rbp)
+   jmp isprimeloop
+getsqrt:
+   movq $1, %rax
+   movq %rax, -48(%rbp)
+getsqrtloop:
+   movq -48(%rbp), %rax
+   mov %rax, %rcx
+   movq $2, %rax
+   mov %rax, %rbx
+   movq $1, %rax
+   call exp
+   movq %rax, -56(%rbp)
+   movq -56(%rbp), %rax
+   mov %rax, %rcx
+   movq -16(%rbp), %rax
+   cmpq %rax, %rcx
+   setg %al
+   movzbq %al, %rax
+   test %rax, %rax
+   jz .ENDIF4
+   movq -48(%rbp), %rax
+   movq %rax, -24(%rbp)
+.ENDIF4:
+   movq -56(%rbp), %rax
+   mov %rax, %rcx
+   movq -16(%rbp), %rax
+   cmpq %rax, %rcx
+   setg %al
+   movzbq %al, %rax
+   test %rax, %rax
+   jz .ENDIF5
+   jmp isprime
+.ENDIF5:
+   movq -48(%rbp), %rax
+   mov %rax, %rcx
+   movq $1, %rax
+   addq %rcx, %rax
+   movq %rax, -48(%rbp)
+   jmp getsqrtloop
+end:
 .exit:
    movq $60, %rax
    xor %rdi, %rdi
@@ -181,6 +220,16 @@ ascii_to_int:
    inc %r9
    mov %r8, %rax
    ret
+
+exp:
+   test %rbx, %rbx
+   jz .endexp
+   mul %rcx
+   dec %rbx
+   jmp exp
+.endexp:
+   ret
+
 ```
 
 ```

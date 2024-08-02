@@ -112,6 +112,11 @@ Token Lexer::next_token()
     else if (this->current_char == '*')
     {
         this->read();
+        if (this->current_char == '*') // if * follows *
+        {
+            this->read();
+            return Token(OP_EXPONENT, "", this->line_number);
+        }
         return Token(OP_MULT, "", this->line_number);
     }
     else if (this->current_char == '%')
