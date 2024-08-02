@@ -3,18 +3,30 @@
 ## Still in development...
 ### Compiles .milk files into AT&T syntax x86-64 Assembly code which can be executed on Linux machines.
 
+# Example: 
 ```
-example.milk:
+prime.milk: prints all prime numbers up to n which is given as input.
 ```
-```
-a = input
-a = a + 1
+```c
+n = input
 i = 1
+
 :loop
-print i
 i = i + 1
-if i < a then goto :loop
-print 420
+if i > n then goto :end
+goto :isprime
+
+:isprime
+j = 2
+:isprimeloop
+if j == i then print i
+if j == i then goto :loop
+remainder = i % j
+if remainder == 0 then goto :loop
+j = j + 1
+goto :isprimeloop
+
+:end
 ```
 
 ```

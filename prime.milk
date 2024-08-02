@@ -1,0 +1,19 @@
+n = input
+i = 1
+
+:loop
+i = i + 1
+if i > n then goto :end
+goto :isprime
+
+:isprime
+j = 2
+:isprimeloop
+if j == i then print i
+if j == i then goto :loop
+remainder = i % j
+if remainder == 0 then goto :loop
+j = j + 1
+goto :isprimeloop
+
+:end

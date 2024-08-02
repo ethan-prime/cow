@@ -15,10 +15,12 @@ enum token_type
     IF,
     THEN,
     OP_LT,
+    OP_GT,
     OP_PLUS,
     OP_MINUS,
     OP_MULT,
     OP_DIV,
+    OP_MOD, // %
     LABEL,
     EQUAL,      // =
     EQUALEQUAL, // ==

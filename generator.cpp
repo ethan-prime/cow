@@ -186,7 +186,7 @@ bool Generator::statement_valid(statement_node stmt)
 
 bool Generator::comparison_valid(comparison_node comp)
 {
-    if (comp.kind == COMP_LESS_THAN || comp.kind == COMP_EQUAL)
+    if (comp.kind == COMP_LESS_THAN || comp.kind == COMP_EQUAL || comp.kind == COMP_GREATER_THAN)
     {
         return this->term_valid(get<term_binary_node>(comp.binary_expr).lhs) && this->term_valid(get<term_binary_node>(comp.binary_expr).rhs);
     }
@@ -204,7 +204,7 @@ bool Generator::expr_valid(expr_node expr)
     {
         return this->term_valid(get<term_node>(expr.expr));
     }
-    else if (expr.kind == BINARY_EXPR_PLUS || expr.kind == BINARY_EXPR_MINUS || expr.kind == BINARY_EXPR_MULT || expr.kind == BINARY_EXPR_DIV)
+    else if (expr.kind == BINARY_EXPR_PLUS || expr.kind == BINARY_EXPR_MINUS || expr.kind == BINARY_EXPR_MULT || expr.kind == BINARY_EXPR_DIV || expr.kind == BINARY_EXPR_MOD)
     {
         return this->term_valid(get<term_binary_node>(expr.expr).lhs) && this->term_valid(get<term_binary_node>(expr.expr).rhs);
     }
@@ -359,9 +359,22 @@ void Generator::expr_to_asm(expr_node expr)
         // assume rhs result (divisor) in %rax. let's store in %rcx for now.
         file << "   mov %rax, %rcx" << endl;
         term_to_asm(binary_expr.lhs);
-        // now we have to multiply them
+        // now we have to divide them
         file << "   xor %rdx, %rdx" << endl; // clear for div instr
         file << "   div %rcx" << endl;
+    }
+    else if (expr.kind == BINARY_EXPR_MOD)
+    {
+        term_binary_node binary_expr = get<term_binary_node>(expr.expr);
+        term_to_asm(binary_expr.rhs);
+        // assume rhs result (divisor) in %rax. let's store in %rcx for now.
+        file << "   mov %rax, %rcx" << endl;
+        term_to_asm(binary_expr.lhs);
+        // now we have to divide them
+        file << "   xor %rdx, %rdx" << endl; // clear for div instr
+        file << "   div %rcx" << endl;
+        // the remainder is in %rdx, move to %rax.
+        file << "   mov %rdx, %rax" << endl;
     }
 }
 
@@ -442,8 +455,25 @@ void Generator::comparison_to_asm(comparison_node comp)
         file << "   mov %rax, %rcx" << endl;
         term_node rhs = binary_expr.rhs;
         term_to_asm(rhs);
-        file << "   cmpq %rax, %rcx" << endl;
+        file << "   cmpq %rcx, %rax" << endl;
         file << "   sete %al" << endl;
+        file << "   movzbq %al, %rax" << endl;
+    }
+    else if (comp.kind == COMP_GREATER_THAN)
+    {
+        term_binary_node binary_expr = get<term_binary_node>(comp.binary_expr);
+        term_node lhs = binary_expr.lhs;
+        term_to_asm(lhs);
+        // lhs is in %rax -> store temp in %rcx.
+        file << "   mov %rax, %rcx" << endl;
+        term_node rhs = binary_expr.rhs;
+        term_to_asm(rhs);
+        // rhs is in %rax, so lets compare now.
+        file << "   cmpq %rax, %rcx" << endl;
+        // if res is less than 0, we know lhs < rhs,
+        // so put a 1 in %rax or else %rax should be 0.
+        file << "   setg %al" << endl;
+        // put it in %rax with zero extend
         file << "   movzbq %al, %rax" << endl;
     }
 }

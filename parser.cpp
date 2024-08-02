@@ -152,6 +152,14 @@ expr_node Parser::parse_expr()
         expr.expr = term_binary_node{lhs, rhs};
         expr.kind = BINARY_EXPR_DIV;
     }
+    else if (this->current_token().kind == OP_MOD)
+    {
+        this->advance();
+        rhs = this->parse_term();
+
+        expr.expr = term_binary_node{lhs, rhs};
+        expr.kind = BINARY_EXPR_MOD;
+    }
     else
     {
         // unary expr
@@ -231,6 +239,11 @@ comparison_node Parser::parse_comparison()
     {
         this->advance();
         comp.kind = COMP_LESS_THAN;
+    }
+    else if (this->current_token().kind == OP_GT)
+    {
+        this->advance();
+        comp.kind = COMP_GREATER_THAN;
     }
     else if (this->current_token().kind == EQUALEQUAL)
     {
@@ -381,6 +394,14 @@ void print_expr(expr_node expr)
 
         cout << (!lhs.value.empty() ? lhs.value : "INPUT") << " / " << (!rhs.value.empty() ? rhs.value : "INPUT");
     }
+    else if (expr.kind == BINARY_EXPR_MOD)
+    {
+        term_node lhs, rhs;
+        lhs = get<term_binary_node>(expr.expr).lhs;
+        rhs = get<term_binary_node>(expr.expr).rhs;
+
+        cout << (!lhs.value.empty() ? lhs.value : "INPUT") << " % " << (!rhs.value.empty() ? rhs.value : "INPUT");
+    }
     else
     {
         cout << "error printing prgm" << endl;
@@ -421,6 +442,10 @@ void print_if_then(if_then_node if_then)
     if (if_then.comparison.kind == COMP_LESS_THAN)
     {
         cout << "IF " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value << " < " << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " THEN" << " {" << endl;
+    }
+    else if (if_then.comparison.kind == COMP_GREATER_THAN)
+    {
+        cout << "IF " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value << " > " << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " THEN" << " {" << endl;
     }
     else if (if_then.comparison.kind == COMP_EQUAL)
     {

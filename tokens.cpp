@@ -43,6 +43,10 @@ string Token::repr()
         return "op_div";
     case EQUALEQUAL:
         return "equalequal";
+    case OP_MOD:
+        return "mod";
+    case OP_GT:
+        return "op_gt";
     default:
         return "moo! something went wrong when tokenizing...";
     }
