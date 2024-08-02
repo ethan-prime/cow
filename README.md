@@ -39,10 +39,10 @@ complies to...
 .globl _start
 _start:
    mov %rsp, %rbp
-   sub $16, %rsp
+   sub $32, %rsp
    sub $24, %rsp
    mov %rbp, %rsi
-   addq $16, %rsi
+   addq $32, %rsi
    movq $0, %rax
    movq $0, %rdi
    movq $24, %rdx
@@ -56,25 +56,9 @@ _start:
    xor %r8, %r8
    call ascii_to_int
    movq %rax, -8(%rbp)
-   movq -8(%rbp), %rax
-   mov %rax, %rcx
-   movq $1, %rax
-   addq %rcx, %rax
-   movq %rax, -8(%rbp)
    movq $1, %rax
    movq %rax, -16(%rbp)
 loop:
-   movq -16(%rbp), %rax
-   movq $1, %rsi
-   sub $24, %rsp
-   mov %rbp, %rcx
-   addq $39, %rcx
-   movq $0x0A, (%rcx)
-   dec %rcx
-   call int_to_ascii
-   movq $1, %rax
-   movq $1, %rdi
-   syscall
    movq -16(%rbp), %rax
    mov %rax, %rcx
    movq $1, %rax
@@ -84,23 +68,83 @@ loop:
    mov %rax, %rcx
    movq -8(%rbp), %rax
    cmpq %rax, %rcx
-   setl %al
+   setg %al
    movzbq %al, %rax
    test %rax, %rax
    jz .ENDIF0
-   jmp loop
+   jmp end
 .ENDIF0:
-   movq $420, %rax
+   jmp isprime
+isprime:
+   movq $2, %rax
+   movq %rax, -24(%rbp)
+isprimeloop:
+   movq -24(%rbp), %rax
+   mov %rax, %rcx
+   movq -16(%rbp), %rax
+   cmpq %rcx, %rax
+   sete %al
+   movzbq %al, %rax
+   test %rax, %rax
+   jz .ENDIF1
+   movq -16(%rbp), %rax
    movq $1, %rsi
    sub $24, %rsp
    mov %rbp, %rcx
-   addq $63, %rcx
+   addq $55, %rcx
    movq $0x0A, (%rcx)
    dec %rcx
    call int_to_ascii
    movq $1, %rax
    movq $1, %rdi
    syscall
+.ENDIF1:
+   movq -24(%rbp), %rax
+   mov %rax, %rcx
+   movq -16(%rbp), %rax
+   cmpq %rcx, %rax
+   sete %al
+   movzbq %al, %rax
+   test %rax, %rax
+   jz .ENDIF2
+   jmp loop
+.ENDIF2:
+   movq -24(%rbp), %rax
+   mov %rax, %rcx
+   movq -16(%rbp), %rax
+   xor %rdx, %rdx
+   div %rcx
+   mov %rdx, %rax
+   movq %rax, -32(%rbp)
+   movq -32(%rbp), %rax
+   mov %rax, %rcx
+   movq $0, %rax
+   cmpq %rcx, %rax
+   sete %al
+   movzbq %al, %rax
+   test %rax, %rax
+   jz .ENDIF3
+   jmp loop
+.ENDIF3:
+   movq -24(%rbp), %rax
+   mov %rax, %rcx
+   movq $1, %rax
+   addq %rcx, %rax
+   movq %rax, -24(%rbp)
+   jmp isprimeloop
+end:
+   movq $69, %rax
+   movq $1, %rsi
+   sub $24, %rsp
+   mov %rbp, %rcx
+   addq $79, %rcx
+   movq $0x0A, (%rcx)
+   dec %rcx
+   call int_to_ascii
+   movq $1, %rax
+   movq $1, %rdi
+   syscall
+.exit:
    movq $60, %rax
    xor %rdi, %rdi
    syscall
