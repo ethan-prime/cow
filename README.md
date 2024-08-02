@@ -264,5 +264,3 @@ After assembling, linking, and executing, stdout reads:
 89
 97
 ```
-
-Special thanks to [Alex](https://github.com/alexjercan) and his [YouTube tutorial](https://youtu.be/HOe2YFnzO2I?si=u_QlAn2AdSL3jNtR) for a lot of guidance on this project. Go check him out :)
