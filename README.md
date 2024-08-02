@@ -30,7 +30,8 @@ goto :isprimeloop
 ```
 
 ```
--> example.s
+./leather prime.milk
+complies to...
 ```
 
 ```assembly
@@ -136,6 +137,37 @@ ascii_to_int:
    inc %r9
    mov %r8, %rax
    ret
+```
+
+```
+After linking and excuting, stdout reads:
+
+100
+2
+3
+5
+7
+11
+13
+17
+19
+23
+29
+31
+37
+41
+43
+47
+53
+59
+61
+67
+71
+73
+79
+83
+89
+97
 ```
 
 Special thanks to [Alex](https://github.com/alexjercan) and his [YouTube tutorial](https://youtu.be/HOe2YFnzO2I?si=u_QlAn2AdSL3jNtR) for a lot of guidance on this project. Go check him out :)
