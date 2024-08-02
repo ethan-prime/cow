@@ -118,6 +118,11 @@ Token Lexer::next_token()
     else if (this->current_char == '=')
     {
         this->read();
+        if (this->current_char == '=') // if = follows =
+        {
+            this->read();
+            return Token(EQUALEQUAL, "", this->line_number);
+        }
         return Token(EQUAL, "", this->line_number);
     }
     // label !?

@@ -122,7 +122,6 @@ expr_node Parser::parse_expr()
 
     if (this->current_token().kind == OP_PLUS)
     {
-        cout << "FART" << endl;
         this->advance();
         rhs = this->parse_term();
 
@@ -231,15 +230,20 @@ comparison_node Parser::parse_comparison()
     if (this->current_token().kind == OP_LT)
     {
         this->advance();
+        comp.kind = COMP_LESS_THAN;
+    }
+    else if (this->current_token().kind == EQUALEQUAL)
+    {
+        this->advance();
+        comp.kind = COMP_EQUAL;
     }
     else
     {
-        error("<");
+        error("a comparison operator");
     }
 
     rhs = parse_term();
     comp.binary_expr = term_binary_node{lhs, rhs};
-    comp.kind = COMP_LESS_THAN;
 
     return comp;
 };
@@ -414,7 +418,18 @@ void print_label(label_node label)
 
 void print_if_then(if_then_node if_then)
 {
-    cout << "IF " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value << " < " << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " THEN" << " {" << endl;
+    if (if_then.comparison.kind == COMP_LESS_THAN)
+    {
+        cout << "IF " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value << " < " << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " THEN" << " {" << endl;
+    }
+    else if (if_then.comparison.kind == COMP_EQUAL)
+    {
+        cout << "IF " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value << " == " << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " THEN" << " {" << endl;
+    }
+    else
+    {
+        cout << "IF " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value << " ?? " << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " THEN" << " {" << endl;
+    }
     struct statement_node *stmt = if_then.statement;
     switch (stmt->kind)
     {

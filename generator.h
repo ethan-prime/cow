@@ -1,5 +1,5 @@
 #include "parser.h"
-
+#include <fstream>
 #pragma once
 
 class Generator
@@ -12,10 +12,11 @@ private:
     vector<string> labels;
     unsigned int current_if_index;
     unsigned int buffer_ptr; // 24 bytes buffer to flush text to console
+    ofstream file;
 
 public:
     // constructor
-    Generator(program_node program);
+    Generator(program_node program, string &output_filename);
 
     // CODE GENERATORS
 

@@ -60,6 +60,7 @@ struct assign_node
 enum comparison_type
 {
     COMP_LESS_THAN,
+    COMP_EQUAL
 };
 
 struct comparison_node

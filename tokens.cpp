@@ -41,6 +41,8 @@ string Token::repr()
         return "op_mult";
     case OP_DIV:
         return "op_div";
+    case EQUALEQUAL:
+        return "equalequal";
     default:
         return "moo! something went wrong when tokenizing...";
     }

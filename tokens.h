@@ -20,7 +20,8 @@ enum token_type
     OP_MULT,
     OP_DIV,
     LABEL,
-    EQUAL,
+    EQUAL,      // =
+    EQUALEQUAL, // ==
     INVALID,
     END_OF_FILE,
 };
