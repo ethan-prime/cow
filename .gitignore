@@ -8,3 +8,5 @@ example.s
 *.s
 *.o
 *.milk
+*.exe
+test

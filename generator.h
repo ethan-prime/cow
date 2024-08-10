@@ -11,6 +11,7 @@ private:
     vector<string> variables;
     vector<string> labels;
     unsigned int current_if_index;
+    unsigned int current_while_index;
     unsigned int buffer_ptr; // 24 bytes buffer to flush text to console
     ofstream file;
 
@@ -35,6 +36,7 @@ public:
     void comparison_to_asm(comparison_node comp);
     void term_to_asm(term_node term);
     void input_to_asm(term_node term);
+    void while_loop_to_asm(while_loop_node while_loop);
 
     // HELPERS
 
@@ -42,6 +44,10 @@ public:
 
     void collect_variables();
     void collect_labels();
+    void collect_all_while_loops();
+    void collect_all_if_thens();
+    void collect_if_then(if_then_node if_then);
+    void collect_while_loops(while_loop_node while_loop);
 
     bool statement_valid(statement_node stmt);
     bool comparison_valid(comparison_node comp);

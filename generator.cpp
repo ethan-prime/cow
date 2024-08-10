@@ -6,7 +6,7 @@
 using namespace std;
 
 // constructor
-Generator::Generator(program_node program, string &output_filename) : program(program), current_if_index(0), file(output_filename)
+Generator::Generator(program_node program, string &output_filename) : program(program), current_if_index(0), current_while_index(0), file(output_filename)
 {
     if (!file)
     {
@@ -20,6 +20,8 @@ void Generator::to_asm()
 {
     this->collect_variables();
     this->collect_labels();
+    this->collect_all_while_loops();
+    this->collect_all_if_thens();
 
     if (!file.is_open())
     {
@@ -113,6 +115,9 @@ void Generator::statement_to_asm(statement_node stmt)
     case STMT_PRINT:
         print_to_asm(get<print_node>(stmt.statement));
         break;
+    case STMT_WHILE_LOOP:
+        while_loop_to_asm(get<while_loop_node>(stmt.statement));
+        break;
     default:
         break;
     }
@@ -186,6 +191,16 @@ bool Generator::statement_valid(statement_node stmt)
         break;
     case STMT_PRINT:
         return this->term_valid(get<print_node>(stmt.statement).term);
+        break;
+    case STMT_WHILE_LOOP:
+        if (!this->comparison_valid(get<while_loop_node>(stmt.statement).comparison))
+            return false;
+        for (statement_node *stmt : get<while_loop_node>(stmt.statement).statements)
+        {
+            if (!this->statement_valid(*stmt))
+                return false;
+        }
+        return true;
         break;
     default:
         cout << "possible error checking if stmt is valid" << endl;
@@ -297,6 +312,136 @@ void Generator::collect_labels()
             // this variable isa now defined.
             if (!in_vector(this->labels, label.label))
                 this->labels.push_back(label.label);
+        }
+    }
+}
+
+/*void Generator::collect_while_loops()
+{
+    for (auto stmt : this->program.statements)
+    {
+        if (stmt.kind == STMT_LABEL)
+        {
+            label_node label = get<label_node>(stmt.statement);
+            // if it's a valid ssignment, make sure we store that
+            // this variable isa now defined.
+            if (!in_vector(this->labels, label.label))
+                this->labels.push_back(label.label);
+        }
+    }
+}*/
+
+void Generator::collect_if_then(if_then_node if_then)
+{
+    if (if_then.statement->kind == STMT_ASSIGN)
+    {
+        assign_node assign = get<assign_node>(if_then.statement->statement);
+        if (!this->expr_valid(assign.expr))
+        {
+            // can't compile because file a sem error.
+            exit(0);
+        }
+        // if it's a valid ssignment, make sure we store that
+        // this variable isa now defined.
+        if (!in_vector(this->variables, assign.identifier))
+            this->variables.push_back(assign.identifier);
+    }
+    else if (if_then.statement->kind == STMT_LABEL)
+    {
+        label_node label = get<label_node>(if_then.statement->statement);
+        // if it's a valid ssignment, make sure we store that
+        // this variable isa now defined.
+        if (!in_vector(this->labels, label.label))
+            this->labels.push_back(label.label);
+    }
+    else if (if_then.statement->kind == STMT_IF_THEN)
+    {
+        this->collect_if_then(get<if_then_node>(if_then.statement->statement)); // follow the nest
+        if (!statement_valid(*if_then.statement))
+        {
+            exit(0);
+        }
+    }
+    else if (if_then.statement->kind == STMT_WHILE_LOOP)
+    {
+        this->collect_while_loops(get<while_loop_node>(if_then.statement->statement)); // follow the nest
+        if (!statement_valid(*if_then.statement))
+        {
+            exit(0);
+        }
+    }
+}
+
+void Generator::collect_all_if_thens()
+{
+    for (auto stmt : this->program.statements)
+    {
+        if (stmt.kind == STMT_IF_THEN)
+        {
+            this->collect_if_then(get<if_then_node>(stmt.statement));
+            if (!statement_valid(stmt))
+            {
+                exit(0);
+            }
+        }
+    }
+}
+
+void Generator::collect_all_while_loops()
+{
+    for (auto stmt : this->program.statements)
+    {
+        if (stmt.kind == STMT_WHILE_LOOP)
+        {
+            this->collect_while_loops(get<while_loop_node>(stmt.statement));
+            if (!statement_valid(stmt))
+            {
+                exit(0);
+            }
+        }
+    }
+}
+
+void Generator::collect_while_loops(while_loop_node while_loop)
+{
+    for (statement_node *stmt : while_loop.statements)
+    {
+        if (stmt->kind == STMT_ASSIGN)
+        {
+            assign_node assign = get<assign_node>(stmt->statement);
+            if (!this->expr_valid(assign.expr))
+            {
+                // can't compile because file a sem error.
+                exit(0);
+            }
+            // if it's a valid ssignment, make sure we store that
+            // this variable isa now defined.
+            if (!in_vector(this->variables, assign.identifier))
+                this->variables.push_back(assign.identifier);
+        }
+        else if (stmt->kind == STMT_LABEL)
+        {
+            label_node label = get<label_node>(stmt->statement);
+            // if it's a valid ssignment, make sure we store that
+            // this variable isa now defined.
+            if (!in_vector(this->labels, label.label))
+                this->labels.push_back(label.label);
+        }
+        else if (stmt->kind == STMT_IF_THEN)
+        {
+            this->collect_if_then(get<if_then_node>(stmt->statement)); // follow the nest
+            if (!statement_valid(*stmt))
+            {
+                exit(0);
+            }
+        }
+        else if (stmt->kind == STMT_WHILE_LOOP)
+        {
+            this->collect_while_loops(get<while_loop_node>(stmt->statement)); // follow the nest
+            if (!statement_valid(*stmt))
+            {
+                exit(0);
+            }
         }
     }
 }
@@ -531,4 +676,26 @@ void Generator::print_to_asm(print_node print)
     file << "   movq $1, %rax" << endl;
     file << "   movq $1, %rdi" << endl;
     file << "   syscall" << endl;
+}
+
+void Generator::while_loop_to_asm(while_loop_node while_loop)
+{
+    file << ".STARTWHILE" << this->current_while_index << ":" << endl;
+    // check condition, if true: execute statments, jump back to beginning of loop (check condition again.)
+    // if false: skip to after while loop
+    // we assume that the result file the comparison is in %rax.
+    comparison_to_asm(while_loop.comparison);
+
+    file << "   test %rax, %rax" << endl; // see if %rax is 0 <=> condition is false, skip to end
+    file << "   jz .ENDWHILE" << this->current_while_index << endl;
+
+    int endwhile = this->current_while_index;
+    this->current_while_index++;
+    for (statement_node *stmt : while_loop.statements)
+    {
+        statement_to_asm(*stmt);
+    }
+    // if we made it to this point, we loop again!
+    file << "   jmp .STARTWHILE" << endwhile << endl;
+    file << ".ENDWHILE" << endwhile << ":" << endl;
 }

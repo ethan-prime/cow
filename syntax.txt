@@ -4,6 +4,7 @@
 <comparison> ::= <term> <comparison_op> <term>
 <comparison_op> ::= '<' | '>' | '=='
 <assignment> ::= <identifier> = <expr>
-<statement> ::= <assignment> | 'if' <comparison> 'then' <statement> | 'goto' <label> | 'print' <term> | <label>
+<while_loop> ::= 'while' <comparison> 'do' '{' <statement> [<statement>]* '}'
+<statement> ::= <assignment> | 'if' <comparison> 'then' <statement> | 'goto' <label> | 'print' <term> | <label> | <while_loop>
 <label> ::= ':' <str_literal>
 <program> ::= <statement> [<statement>]*
