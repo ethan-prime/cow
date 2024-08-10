@@ -9,40 +9,29 @@ prime.milk: prints all prime numbers up to n which is given as input.
 ```
 ```c
 n = input
-i = 1
-sqrt = 2
+i = 2
 
-:loop
-i = i + 1
-if i > n then goto :end
-goto :getsqrt
-
-:isprime
-j = 2
-:isprimeloop
-if j == sqrt then print i
-if j == sqrt then goto :loop
-remainder = i % j
-if remainder == 0 then goto :loop
-j = j + 1
-goto :isprimeloop
-
-:getsqrt
-k = 1
-:getsqrtloop
-square = k ** 2
-if square > i then sqrt = k
-if square > i then goto :isprime
-k = k + 1
-goto :getsqrtloop
-
-:end
+while i < n do {
+    sqrt = 2
+    squared = sqrt ** 2
+    while squared < i do {
+        sqrt = sqrt + 1
+        squared = sqrt ** 2
+    }
+    factor = 2
+    prime = 1
+    while factor < sqrt do {
+        remainder = i % factor
+        if remainder == 0 then prime = 0
+        factor = factor + 1
+    }
+    if prime == 1 then print i
+    i = i + 1
+}
 ```
 
 ```
 ./leather prime.milk
-gcc -c prime.s -o prime.o
-ld prime.o -o prime
 complies to...
 ```
 
@@ -54,7 +43,7 @@ _start:
    sub $56, %rsp
    sub $24, %rsp
    mov %rbp, %rsi
-   addq $56, %rsi
+   addq $16, %rsi
    movq $0, %rax
    movq $0, %rdi
    movq $24, %rdx
@@ -68,34 +57,90 @@ _start:
    xor %r8, %r8
    call ascii_to_int
    movq %rax, -8(%rbp)
-   movq $1, %rax
-   movq %rax, -16(%rbp)
    movq $2, %rax
-   movq %rax, -24(%rbp)
-loop:
-   movq -16(%rbp), %rax
-   mov %rax, %rcx
-   movq $1, %rax
-   addq %rcx, %rax
    movq %rax, -16(%rbp)
+.STARTWHILE0:
    movq -16(%rbp), %rax
    mov %rax, %rcx
    movq -8(%rbp), %rax
    cmpq %rax, %rcx
-   setg %al
+   setl %al
+   movzbq %al, %rax
+   test %rax, %rax
+   jz .ENDWHILE0
+   movq $2, %rax
+   movq %rax, -24(%rbp)
+   movq -24(%rbp), %rax
+   mov %rax, %rcx
+   movq $2, %rax
+   mov %rax, %rbx
+   movq $1, %rax
+   call exp
+   movq %rax, -32(%rbp)
+.STARTWHILE1:
+   movq -32(%rbp), %rax
+   mov %rax, %rcx
+   movq -16(%rbp), %rax
+   cmpq %rax, %rcx
+   setl %al
+   movzbq %al, %rax
+   test %rax, %rax
+   jz .ENDWHILE1
+   movq -24(%rbp), %rax
+   mov %rax, %rcx
+   movq $1, %rax
+   addq %rcx, %rax
+   movq %rax, -24(%rbp)
+   movq -24(%rbp), %rax
+   mov %rax, %rcx
+   movq $2, %rax
+   mov %rax, %rbx
+   movq $1, %rax
+   call exp
+   movq %rax, -32(%rbp)
+   jmp .STARTWHILE1
+.ENDWHILE1:
+   movq $2, %rax
+   movq %rax, -40(%rbp)
+   movq $1, %rax
+   movq %rax, -48(%rbp)
+.STARTWHILE2:
+   movq -40(%rbp), %rax
+   mov %rax, %rcx
+   movq -24(%rbp), %rax
+   cmpq %rax, %rcx
+   setl %al
+   movzbq %al, %rax
+   test %rax, %rax
+   jz .ENDWHILE2
+   movq -40(%rbp), %rax
+   mov %rax, %rcx
+   movq -16(%rbp), %rax
+   xor %rdx, %rdx
+   div %rcx
+   mov %rdx, %rax
+   movq %rax, -56(%rbp)
+   movq -56(%rbp), %rax
+   mov %rax, %rcx
+   movq $0, %rax
+   cmpq %rcx, %rax
+   sete %al
    movzbq %al, %rax
    test %rax, %rax
    jz .ENDIF0
-   jmp end
+   movq $0, %rax
+   movq %rax, -48(%rbp)
 .ENDIF0:
-   jmp getsqrt
-isprime:
-   movq $2, %rax
-   movq %rax, -32(%rbp)
-isprimeloop:
-   movq -32(%rbp), %rax
+   movq -40(%rbp), %rax
    mov %rax, %rcx
-   movq -24(%rbp), %rax
+   movq $1, %rax
+   addq %rcx, %rax
+   movq %rax, -40(%rbp)
+   jmp .STARTWHILE2
+.ENDWHILE2:
+   movq -48(%rbp), %rax
+   mov %rax, %rcx
+   movq $1, %rax
    cmpq %rcx, %rax
    sete %al
    movzbq %al, %rax
@@ -105,7 +150,7 @@ isprimeloop:
    movq $1, %rsi
    sub $24, %rsp
    mov %rbp, %rcx
-   addq $79, %rcx
+   addq $39, %rcx
    movq $0x0A, (%rcx)
    dec %rcx
    call int_to_ascii
@@ -113,78 +158,13 @@ isprimeloop:
    movq $1, %rdi
    syscall
 .ENDIF1:
-   movq -32(%rbp), %rax
-   mov %rax, %rcx
-   movq -24(%rbp), %rax
-   cmpq %rcx, %rax
-   sete %al
-   movzbq %al, %rax
-   test %rax, %rax
-   jz .ENDIF2
-   jmp loop
-.ENDIF2:
-   movq -32(%rbp), %rax
-   mov %rax, %rcx
    movq -16(%rbp), %rax
-   xor %rdx, %rdx
-   div %rcx
-   mov %rdx, %rax
-   movq %rax, -40(%rbp)
-   movq -40(%rbp), %rax
-   mov %rax, %rcx
-   movq $0, %rax
-   cmpq %rcx, %rax
-   sete %al
-   movzbq %al, %rax
-   test %rax, %rax
-   jz .ENDIF3
-   jmp loop
-.ENDIF3:
-   movq -32(%rbp), %rax
    mov %rax, %rcx
    movq $1, %rax
    addq %rcx, %rax
-   movq %rax, -32(%rbp)
-   jmp isprimeloop
-getsqrt:
-   movq $1, %rax
-   movq %rax, -48(%rbp)
-getsqrtloop:
-   movq -48(%rbp), %rax
-   mov %rax, %rcx
-   movq $2, %rax
-   mov %rax, %rbx
-   movq $1, %rax
-   call exp
-   movq %rax, -56(%rbp)
-   movq -56(%rbp), %rax
-   mov %rax, %rcx
-   movq -16(%rbp), %rax
-   cmpq %rax, %rcx
-   setg %al
-   movzbq %al, %rax
-   test %rax, %rax
-   jz .ENDIF4
-   movq -48(%rbp), %rax
-   movq %rax, -24(%rbp)
-.ENDIF4:
-   movq -56(%rbp), %rax
-   mov %rax, %rcx
-   movq -16(%rbp), %rax
-   cmpq %rax, %rcx
-   setg %al
-   movzbq %al, %rax
-   test %rax, %rax
-   jz .ENDIF5
-   jmp isprime
-.ENDIF5:
-   movq -48(%rbp), %rax
-   mov %rax, %rcx
-   movq $1, %rax
-   addq %rcx, %rax
-   movq %rax, -48(%rbp)
-   jmp getsqrtloop
-end:
+   movq %rax, -16(%rbp)
+   jmp .STARTWHILE0
+.ENDWHILE0:
 .exit:
    movq $60, %rax
    xor %rdi, %rdi
@@ -235,9 +215,14 @@ exp:
 ```
 
 ```
-After assembling, linking, and executing, stdout reads:
+gcc -c prime.s -o prime.o
+ld prime.o -o prime
+./prime
+```
 
-100
+```
+stdout reads:
+100 # input
 2
 3
 5

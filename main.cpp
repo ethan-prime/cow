@@ -28,11 +28,11 @@ int main(int argc, char *argv[])
     Lexer lexer(buffer);
 
     vector<Token> tokens = lexer.tokenize();
-    print_tokens(tokens);
+    // print_tokens(tokens);
 
     Parser parser(tokens);
     program_node p = parser.parse_program();
-    print_program(p);
+    // print_program(p);
 
     Generator generator(p, output_name);
     generator.to_asm();
