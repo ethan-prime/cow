@@ -294,8 +294,14 @@ statement_node Parser::parse_if_then()
 comparison_node Parser::parse_comparison()
 {
     comparison_node comp;
-
+    bool isnot = false;
     term_node lhs, rhs;
+
+    if (this->current_token().kind == NOT)
+    {
+        this->advance();
+        isnot = true;
+    }
 
     lhs = parse_term();
 
@@ -327,6 +333,7 @@ comparison_node Parser::parse_comparison()
 
     rhs = parse_term();
     comp.binary_expr = term_binary_node{lhs, rhs};
+    comp.is_not = isnot;
 
     return comp;
 };

@@ -638,6 +638,11 @@ void Generator::comparison_to_asm(comparison_node comp)
             file << "   setne %al" << endl;
         file << "   movzbq %al, %rax" << endl;
     }
+    // now, there is either a 0 or 1 is %rax. lets just flip the last bit if is_not is true.
+    if (comp.is_not)
+    {
+        file << "   xor $1, %rax" << endl;
+    }
 }
 
 void Generator::print_to_asm(print_node print)

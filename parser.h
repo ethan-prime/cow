@@ -72,6 +72,7 @@ struct comparison_node
 {
     comparison_type kind;
     variant<term_binary_node> binary_expr;
+    bool is_not;
 };
 
 struct statement_node;
