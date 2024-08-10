@@ -5,7 +5,7 @@
 
 # Example: 
 ```
-prime.milk: prints all prime numbers up to n which is given as input.
+prime.milk: prints (moos) all prime numbers up to n which is given as input.
 ```
 ```c
 n = input
@@ -25,7 +25,7 @@ while i < n do {
         if remainder == 0 then prime = 0
         factor = factor + 1
     }
-    if prime == 1 then print i
+    if prime == 1 then moo i
     i = i + 1
 }
 ```

@@ -52,7 +52,7 @@ bool is_keyword(const string &buf, token_type &kind)
         kind = INPUT;
         return true;
     }
-    else if (buf == "print")
+    else if (buf == "moo" || buf == "print")
     {
         kind = PRINT;
         return true;
