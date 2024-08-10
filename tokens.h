@@ -33,6 +33,8 @@ enum token_type
     NOTEQUAL,   // !=
     INVALID,
     END_OF_FILE,
+    BOOL_TRUE,
+    BOOL_FALSE,
 };
 
 class Token

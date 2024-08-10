@@ -61,6 +61,10 @@ string Token::repr()
         return "open_bracket";
     case CLOSE_BRACKET:
         return "close_bracket";
+    case BOOL_TRUE:
+        return "true";
+    case BOOL_FALSE:
+        return "false";
     default:
         return "moo! something went wrong when tokenizing...";
     }

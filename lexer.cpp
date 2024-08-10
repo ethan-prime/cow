@@ -82,6 +82,16 @@ bool is_keyword(const string &buf, token_type &kind)
         kind = DO;
         return true;
     }
+    else if (buf == "true")
+    {
+        kind = BOOL_TRUE;
+        return true;
+    }
+    else if (buf == "false")
+    {
+        kind = BOOL_FALSE;
+        return true;
+    }
     else
     {
         return false;
@@ -216,6 +226,14 @@ Token Lexer::next_token()
         if (is_keyword(buf, kind))
         {
             // if its a keyword, return that.
+            if (kind == BOOL_TRUE)
+            {
+                return Token(INT_LITERAL, "1", this->line_number);
+            }
+            else if (kind == BOOL_FALSE)
+            {
+                return Token(INT_LITERAL, "0", this->line_number);
+            }
             return Token(kind, "", this->line_number);
         }
         // else, it should be an identifier.

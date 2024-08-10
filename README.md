@@ -9,7 +9,7 @@ prime.milk: prints (moos) all prime numbers up to n which is given as input.
 ```
 ```c
 n = input
-i = 2
+i = 0
 
 while i < n do {
     sqrt = 2
@@ -19,13 +19,13 @@ while i < n do {
         squared = sqrt ** 2
     }
     factor = 2
-    prime = 1
+    prime = true
     while factor < sqrt do {
         remainder = i % factor
-        if remainder == 0 then prime = 0
+        if remainder == 0 then prime = false
         factor = factor + 1
     }
-    if prime == 1 then moo i
+    if prime == true then moo i
     i = i + 1
 }
 ```
@@ -41,12 +41,12 @@ complies to...
 _start:
    mov %rsp, %rbp
    sub $56, %rsp
-   sub $24, %rsp
+   sub $64, %rsp
    mov %rbp, %rsi
-   addq $16, %rsi
+   addq $56, %rsi
    movq $0, %rax
    movq $0, %rdi
-   movq $24, %rdx
+   movq $64, %rdx
    syscall
    mov %rax, %rcx
    subq $1, %rcx
@@ -57,7 +57,7 @@ _start:
    xor %r8, %r8
    call ascii_to_int
    movq %rax, -8(%rbp)
-   movq $2, %rax
+   movq $0, %rax
    movq %rax, -16(%rbp)
 .STARTWHILE0:
    movq -16(%rbp), %rax
@@ -148,9 +148,8 @@ _start:
    jz .ENDIF1
    movq -16(%rbp), %rax
    movq $1, %rsi
-   sub $24, %rsp
    mov %rbp, %rcx
-   addq $39, %rcx
+   addq $119, %rcx
    movq $0x0A, (%rcx)
    dec %rcx
    call int_to_ascii
