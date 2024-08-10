@@ -14,6 +14,10 @@ enum token_type
     GOTO,
     IF,
     THEN,
+    WHILE,
+    DO,
+    OPEN_BRACKET,  // {
+    CLOSE_BRACKET, // }
     OP_LT,
     OP_GT,
     OP_PLUS,

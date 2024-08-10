@@ -76,12 +76,69 @@ statement_node Parser::parse_statement()
     {
         stmt = this->parse_label();
     }
+    else if (this->current_token().kind == WHILE)
+    {
+        stmt = this->parse_while_loop();
+    }
     else
     {
         error("a statement");
     }
     return stmt;
 };
+
+// <while_loop> ::= 'while' <comparison> 'do' '{' <statement> [<statement>]* '}'
+statement_node Parser::parse_while_loop()
+{
+    comparison_node comp;
+    vector<statement_node *> stmts;
+
+    if (this->current_token().kind == WHILE)
+    {
+        this->advance();
+        comp = this->parse_comparison();
+    }
+    else
+    {
+        error("while");
+    }
+    if (this->current_token().kind == DO)
+    {
+        this->advance();
+    }
+    else
+    {
+        error("do");
+    }
+    if (this->current_token().kind == OPEN_BRACKET)
+    {
+        this->advance();
+    }
+    else
+    {
+        error("{");
+    }
+    while (this->current_token().kind != CLOSE_BRACKET)
+    {
+        stmts.push_back(new statement_node(this->parse_statement()));
+    }
+    if (this->current_token().kind == CLOSE_BRACKET)
+    {
+        this->advance();
+    }
+    else
+    {
+        error("}");
+    }
+    while_loop_node while_loop;
+    while_loop.comparison = comp;
+    while_loop.statements = stmts;
+
+    statement_node stmt;
+    stmt.kind = STMT_WHILE_LOOP;
+    stmt.statement = while_loop;
+    return stmt;
+}
 
 // <assignment> ::= <identifier> = <expr>
 statement_node Parser::parse_assignment()
@@ -349,6 +406,9 @@ void print_program(program_node program)
         case STMT_PRINT:
             print_print(get<print_node>(stmt.statement));
             break;
+        case STMT_WHILE_LOOP:
+            print_while_loop(get<while_loop_node>(stmt.statement));
+            break;
         default:
             break;
         }
@@ -494,3 +554,50 @@ void print_if_then(if_then_node if_then)
     }
     cout << "}" << endl;
 };
+
+void print_while_loop(while_loop_node while_loop)
+{
+    if (while_loop.comparison.kind == COMP_LESS_THAN)
+    {
+        cout << "WHILE " << get<term_binary_node>(while_loop.comparison.binary_expr).lhs.value << " < " << get<term_binary_node>(while_loop.comparison.binary_expr).rhs.value << " DO" << " {" << endl;
+    }
+    else if (while_loop.comparison.kind == COMP_GREATER_THAN)
+    {
+        cout << "WHILE " << get<term_binary_node>(while_loop.comparison.binary_expr).lhs.value << " > " << get<term_binary_node>(while_loop.comparison.binary_expr).rhs.value << " DO" << " {" << endl;
+    }
+    else if (while_loop.comparison.kind == COMP_EQUAL)
+    {
+        cout << "WHILE " << get<term_binary_node>(while_loop.comparison.binary_expr).lhs.value << " == " << get<term_binary_node>(while_loop.comparison.binary_expr).rhs.value << " DO" << " {" << endl;
+    }
+    else
+    {
+        cout << "WHILE " << get<term_binary_node>(while_loop.comparison.binary_expr).lhs.value << " ?? " << get<term_binary_node>(while_loop.comparison.binary_expr).rhs.value << " DO" << " {" << endl;
+    }
+    for (statement_node *stmt : while_loop.statements)
+    {
+        switch (stmt->kind)
+        {
+        case STMT_ASSIGN:
+            print_assign(get<assign_node>(stmt->statement));
+            break;
+        case STMT_GOTO:
+            print_goto(get<goto_node>(stmt->statement));
+            break;
+        case STMT_IF_THEN:
+            print_if_then(get<if_then_node>(stmt->statement));
+            break;
+        case STMT_LABEL:
+            print_label(get<label_node>(stmt->statement));
+            break;
+        case STMT_PRINT:
+            print_print(get<print_node>(stmt->statement));
+            break;
+        case STMT_WHILE_LOOP:
+            print_while_loop(get<while_loop_node>(stmt->statement));
+            break;
+        default:
+            break;
+        }
+    }
+    cout << "}" << endl;
+}

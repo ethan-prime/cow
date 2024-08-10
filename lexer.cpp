@@ -72,6 +72,16 @@ bool is_keyword(const string &buf, token_type &kind)
         kind = THEN;
         return true;
     }
+    else if (buf == "while")
+    {
+        kind = WHILE;
+        return true;
+    }
+    else if (buf == "do")
+    {
+        kind = DO;
+        return true;
+    }
     else
     {
         return false;
@@ -128,6 +138,16 @@ Token Lexer::next_token()
     {
         this->read();
         return Token(OP_DIV, "", this->line_number);
+    }
+    else if (this->current_char == '{')
+    {
+        this->read();
+        return Token(OPEN_BRACKET, "", this->line_number);
+    }
+    else if (this->current_char == '}')
+    {
+        this->read();
+        return Token(CLOSE_BRACKET, "", this->line_number);
     }
     // add support for == soon !
     else if (this->current_char == '=')

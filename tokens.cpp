@@ -49,6 +49,14 @@ string Token::repr()
         return "op_gt";
     case OP_EXPONENT:
         return "op_exp";
+    case WHILE:
+        return "while";
+    case DO:
+        return "do";
+    case OPEN_BRACKET:
+        return "open_bracket";
+    case CLOSE_BRACKET:
+        return "close_bracket";
     default:
         return "moo! something went wrong when tokenizing...";
     }
