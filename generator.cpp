@@ -22,7 +22,6 @@ void Generator::to_asm()
     this->collect_labels();
     this->collect_all_while_loops();
     this->collect_all_if_thens();
-    this->update_buffer_ptr();
 
     if (!file.is_open())
     {
@@ -38,6 +37,10 @@ void Generator::to_asm()
     file << "   mov %rsp, %rbp" << endl;
     // allocate memory for variables on the stack
     file << "   sub $" << this->variables.size() * 8 << ", %rsp" << endl;
+    this->update_buffer_ptr();
+
+    // allocate memory for buffer for inputs and printing to the screen
+    file << "   sub $64, %rsp" << endl;
     for (statement_node stmt : this->program.statements)
     {
         this->statement_to_asm(stmt);
@@ -144,7 +147,7 @@ void Generator::assign_to_asm(assign_node assign)
     expr_to_asm(assign.expr);
 
     int index = this->variable_index(assign.identifier);
-    // store variable at %rsp + index*8
+    // store variable at %rbp - index*8
     file << "   movq %rax, -" << index * 8 + 8 << "(%rbp)" << endl;
 }
 
@@ -554,12 +557,11 @@ void Generator::expr_to_asm(expr_node expr)
 void Generator::input_to_asm(term_node term)
 {
     // we need to allocate space for the input
-    file << "   sub $24, %rsp" << endl;
     file << "   mov %rbp, %rsi" << endl;
     file << "   addq $" << this->buffer_ptr << ", %rsi" << endl;
     file << "   movq $0, %rax" << endl;
     file << "   movq $0, %rdi" << endl;
-    file << "   movq $24, %rdx" << endl;
+    file << "   movq $64, %rdx" << endl;
     file << "   syscall" << endl;
 
     // now, the number file bytes read in should be in %rax.
@@ -659,14 +661,11 @@ void Generator::print_to_asm(print_node print)
 
     // preparation for call to int_to_ascii
     file << "   movq $1, %rsi" << endl; // we have to print at least a \n
-    file << "   sub $24, %rsp" << endl;
     file << "   mov %rbp, %rcx" << endl;
-    file << "   addq $" << this->buffer_ptr + 23 << ", %rcx" << endl;
+    file << "   addq $" << this->buffer_ptr + 63 << ", %rcx" << endl;
     file << "   movq $0x0A, (%rcx)" << endl; // newline character at end file str
     file << "   dec %rcx" << endl;
     file << "   call int_to_ascii" << endl;
-
-    this->buffer_ptr += 24;
     // sys_write: %rax = 1; %rdi = unsigned int fd; %rsi = const char *buf; %rdx = size_t count;
 
     // now we assume that our buffer ptr is in %rsi and the length is in %rdx.
