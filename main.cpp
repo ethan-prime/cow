@@ -12,7 +12,6 @@ int main(int argc, char *argv[])
     {
         size_t dotPosition = file_name.rfind('.');
         output_name = file_name.substr(0, dotPosition) + ".s";
-        cout << output_name << endl;
     }
     else if (argc == 3)
     {
@@ -23,6 +22,8 @@ int main(int argc, char *argv[])
         cout << "Invalid number of arguments" << endl;
         exit(0);
     }
+
+    cout << "[leather] " << file_name << " -> " << output_name << endl;
 
     string buffer = read_file(file_name);
     Lexer lexer(buffer);

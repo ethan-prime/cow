@@ -64,7 +64,8 @@ enum comparison_type
 {
     COMP_LESS_THAN,
     COMP_GREATER_THAN,
-    COMP_EQUAL
+    COMP_EQUAL,
+    COMP_NOT_EQUAL
 };
 
 struct comparison_node

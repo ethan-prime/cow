@@ -315,6 +315,11 @@ comparison_node Parser::parse_comparison()
         this->advance();
         comp.kind = COMP_EQUAL;
     }
+    else if (this->current_token().kind == NOTEQUAL)
+    {
+        this->advance();
+        comp.kind = COMP_NOT_EQUAL;
+    }
     else
     {
         error("a comparison operator");
@@ -515,22 +520,26 @@ void print_label(label_node label)
 
 void print_if_then(if_then_node if_then)
 {
-    if (if_then.comparison.kind == COMP_LESS_THAN)
+    cout << "IF " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value;
+    switch (if_then.comparison.kind)
     {
-        cout << "IF " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value << " < " << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " THEN" << " {" << endl;
+    case COMP_LESS_THAN:
+        cout << " < ";
+        break;
+    case COMP_GREATER_THAN:
+        cout << " > ";
+        break;
+    case COMP_EQUAL:
+        cout << " == ";
+        break;
+    case COMP_NOT_EQUAL:
+        cout << " != ";
+        break;
+    default:
+        cout << " ?? ";
+        break;
     }
-    else if (if_then.comparison.kind == COMP_GREATER_THAN)
-    {
-        cout << "IF " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value << " > " << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " THEN" << " {" << endl;
-    }
-    else if (if_then.comparison.kind == COMP_EQUAL)
-    {
-        cout << "IF " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value << " == " << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " THEN" << " {" << endl;
-    }
-    else
-    {
-        cout << "IF " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value << " ?? " << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " THEN" << " {" << endl;
-    }
+    cout << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " THEN" << " {" << endl;
     struct statement_node *stmt = if_then.statement;
     switch (stmt->kind)
     {

@@ -22,6 +22,7 @@ void Generator::to_asm()
     this->collect_labels();
     this->collect_all_while_loops();
     this->collect_all_if_thens();
+    this->update_buffer_ptr();
 
     if (!file.is_open())
     {
@@ -211,7 +212,7 @@ bool Generator::statement_valid(statement_node stmt)
 
 bool Generator::comparison_valid(comparison_node comp)
 {
-    if (comp.kind == COMP_LESS_THAN || comp.kind == COMP_EQUAL || comp.kind == COMP_GREATER_THAN)
+    if (comp.kind == COMP_LESS_THAN || comp.kind == COMP_EQUAL || comp.kind == COMP_GREATER_THAN || comp.kind == COMP_NOT_EQUAL)
     {
         return this->term_valid(get<term_binary_node>(comp.binary_expr).lhs) && this->term_valid(get<term_binary_node>(comp.binary_expr).rhs);
     }
@@ -280,6 +281,11 @@ bool Generator::is_defined(string var)
     return false;
 }
 
+void Generator::update_buffer_ptr()
+{
+    this->buffer_ptr = this->variables.size() * 8;
+}
+
 void Generator::collect_variables()
 {
     for (auto stmt : this->program.statements)
@@ -298,7 +304,6 @@ void Generator::collect_variables()
                 this->variables.push_back(assign.identifier);
         }
     }
-    this->buffer_ptr = this->variables.size() * 8;
 }
 
 void Generator::collect_labels()
@@ -598,7 +603,7 @@ void Generator::term_to_asm(term_node term)
 void Generator::comparison_to_asm(comparison_node comp)
 {
     // we need to store in %rax.
-    if (comp.kind == COMP_LESS_THAN)
+    if (comp.kind == COMP_LESS_THAN || comp.kind == COMP_GREATER_THAN)
     {
         term_binary_node binary_expr = get<term_binary_node>(comp.binary_expr);
         term_node lhs = binary_expr.lhs;
@@ -611,11 +616,14 @@ void Generator::comparison_to_asm(comparison_node comp)
         file << "   cmpq %rax, %rcx" << endl;
         // if res is less than 0, we know lhs < rhs,
         // so put a 1 in %rax or else %rax should be 0.
-        file << "   setl %al" << endl;
+        if (comp.kind == COMP_LESS_THAN)
+            file << "   setl %al" << endl;
+        else if (comp.kind == COMP_GREATER_THAN)
+            file << "   setg %al" << endl;
         // put it in %rax with zero extend
         file << "   movzbq %al, %rax" << endl;
     }
-    else if (comp.kind == COMP_EQUAL)
+    else if (comp.kind == COMP_EQUAL || comp.kind == COMP_NOT_EQUAL)
     {
         term_binary_node binary_expr = get<term_binary_node>(comp.binary_expr);
         term_node lhs = binary_expr.lhs;
@@ -624,24 +632,10 @@ void Generator::comparison_to_asm(comparison_node comp)
         term_node rhs = binary_expr.rhs;
         term_to_asm(rhs);
         file << "   cmpq %rcx, %rax" << endl;
-        file << "   sete %al" << endl;
-        file << "   movzbq %al, %rax" << endl;
-    }
-    else if (comp.kind == COMP_GREATER_THAN)
-    {
-        term_binary_node binary_expr = get<term_binary_node>(comp.binary_expr);
-        term_node lhs = binary_expr.lhs;
-        term_to_asm(lhs);
-        // lhs is in %rax -> store temp in %rcx.
-        file << "   mov %rax, %rcx" << endl;
-        term_node rhs = binary_expr.rhs;
-        term_to_asm(rhs);
-        // rhs is in %rax, so lets compare now.
-        file << "   cmpq %rax, %rcx" << endl;
-        // if res is less than 0, we know lhs < rhs,
-        // so put a 1 in %rax or else %rax should be 0.
-        file << "   setg %al" << endl;
-        // put it in %rax with zero extend
+        if (comp.kind == COMP_EQUAL)
+            file << "   sete %al" << endl;
+        else if (comp.kind == COMP_NOT_EQUAL)
+            file << "   setne %al" << endl;
         file << "   movzbq %al, %rax" << endl;
     }
 }

@@ -29,6 +29,8 @@ enum token_type
     LABEL,
     EQUAL,      // =
     EQUALEQUAL, // ==
+    NOT,        // !
+    NOTEQUAL,   // !=
     INVALID,
     END_OF_FILE,
 };

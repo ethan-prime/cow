@@ -49,6 +49,8 @@ public:
     void collect_if_then(if_then_node if_then);
     void collect_while_loops(while_loop_node while_loop);
 
+    void update_buffer_ptr();
+
     bool statement_valid(statement_node stmt);
     bool comparison_valid(comparison_node comp);
     bool goto_valid(goto_node goto_);

@@ -43,6 +43,10 @@ string Token::repr()
         return "op_div";
     case EQUALEQUAL:
         return "equalequal";
+    case NOT:
+        return "not";
+    case NOTEQUAL:
+        return "not_equal";
     case OP_MOD:
         return "op_mod";
     case OP_GT:
