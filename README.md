@@ -22,10 +22,14 @@ while i < n do {
     prime = true
     while factor < sqrt do {
         remainder = i % factor
-        if remainder == 0 then prime = false
+        if remainder == 0 then {
+            prime = false
+        }
         factor = factor + 1
     }
-    if prime == true then moo i
+    if prime == true then {
+        moo i
+    }
     i = i + 1
 }
 ```

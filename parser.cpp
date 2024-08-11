@@ -263,18 +263,18 @@ term_node Parser::parse_term()
 // 'if' <comparison> 'then' <statement>
 statement_node Parser::parse_if_then()
 {
-    statement_node stmt;
-    if_then_node if_then;
+    comparison_node comp;
+    vector<statement_node *> stmts;
 
     if (this->current_token().kind == IF)
     {
         this->advance();
+        comp = this->parse_comparison();
     }
     else
     {
         error("if");
     }
-    if_then.comparison = this->parse_comparison();
     if (this->current_token().kind == THEN)
     {
         this->advance();
@@ -283,8 +283,31 @@ statement_node Parser::parse_if_then()
     {
         error("then");
     }
-    statement_node *then_stmt = new statement_node(this->parse_statement());
-    if_then.statement = then_stmt;
+    if (this->current_token().kind == OPEN_BRACKET)
+    {
+        this->advance();
+    }
+    else
+    {
+        error("{");
+    }
+    while (this->current_token().kind != CLOSE_BRACKET)
+    {
+        stmts.push_back(new statement_node(this->parse_statement()));
+    }
+    if (this->current_token().kind == CLOSE_BRACKET)
+    {
+        this->advance();
+    }
+    else
+    {
+        error("}");
+    }
+    if_then_node if_then;
+    if_then.comparison = comp;
+    if_then.statements = stmts;
+
+    statement_node stmt;
     stmt.kind = STMT_IF_THEN;
     stmt.statement = if_then;
     return stmt;
@@ -527,46 +550,47 @@ void print_label(label_node label)
 
 void print_if_then(if_then_node if_then)
 {
-    cout << "IF " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value;
-    switch (if_then.comparison.kind)
+    if (if_then.comparison.kind == COMP_LESS_THAN)
     {
-    case COMP_LESS_THAN:
-        cout << " < ";
-        break;
-    case COMP_GREATER_THAN:
-        cout << " > ";
-        break;
-    case COMP_EQUAL:
-        cout << " == ";
-        break;
-    case COMP_NOT_EQUAL:
-        cout << " != ";
-        break;
-    default:
-        cout << " ?? ";
-        break;
+        cout << "WHILE " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value << " < " << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " DO" << " {" << endl;
     }
-    cout << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " THEN" << " {" << endl;
-    struct statement_node *stmt = if_then.statement;
-    switch (stmt->kind)
+    else if (if_then.comparison.kind == COMP_GREATER_THAN)
     {
-    case STMT_ASSIGN:
-        print_assign(get<assign_node>(stmt->statement));
-        break;
-    case STMT_GOTO:
-        print_goto(get<goto_node>(stmt->statement));
-        break;
-    case STMT_IF_THEN:
-        print_if_then(get<if_then_node>(stmt->statement));
-        break;
-    case STMT_LABEL:
-        print_label(get<label_node>(stmt->statement));
-        break;
-    case STMT_PRINT:
-        print_print(get<print_node>(stmt->statement));
-        break;
-    default:
-        break;
+        cout << "WHILE " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value << " > " << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " DO" << " {" << endl;
+    }
+    else if (if_then.comparison.kind == COMP_EQUAL)
+    {
+        cout << "WHILE " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value << " == " << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " DO" << " {" << endl;
+    }
+    else
+    {
+        cout << "WHILE " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value << " ?? " << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " DO" << " {" << endl;
+    }
+    for (statement_node *stmt : if_then.statements)
+    {
+        switch (stmt->kind)
+        {
+        case STMT_ASSIGN:
+            print_assign(get<assign_node>(stmt->statement));
+            break;
+        case STMT_GOTO:
+            print_goto(get<goto_node>(stmt->statement));
+            break;
+        case STMT_IF_THEN:
+            print_if_then(get<if_then_node>(stmt->statement));
+            break;
+        case STMT_LABEL:
+            print_label(get<label_node>(stmt->statement));
+            break;
+        case STMT_PRINT:
+            print_print(get<print_node>(stmt->statement));
+            break;
+        case STMT_WHILE_LOOP:
+            print_while_loop(get<while_loop_node>(stmt->statement));
+            break;
+        default:
+            break;
+        }
     }
     cout << "}" << endl;
 };

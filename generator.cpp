@@ -153,24 +153,18 @@ void Generator::assign_to_asm(assign_node assign)
 
 void Generator::if_then_to_asm(if_then_node if_then)
 {
-    if (!this->comparison_valid(if_then.comparison) || !this->statement_valid(*if_then.statement))
-    {
-        // can't compile because file a sem error.
-        exit(0);
-    }
     // we assume that the result file the comparison is in %rax.
     comparison_to_asm(if_then.comparison);
 
-    file << "   test %rax, %rax" << endl; // see if %rax is 0
-    // if %rax is 0, the condition is true, so we should skip to after
-    // the then statement.
+    file << "   test %rax, %rax" << endl; // see if %rax is 0 <=> condition is false, skip to end
     file << "   jz .ENDIF" << this->current_if_index << endl;
+
     int endif = this->current_if_index;
     this->current_if_index++;
-
-    // this code will run if the jz instruction doesn't execute
-    // (if the comparison evaluates to true)
-    statement_to_asm(*if_then.statement);
+    for (statement_node *stmt : if_then.statements)
+    {
+        statement_to_asm(*stmt);
+    }
     file << ".ENDIF" << endif << ":" << endl;
 }
 
@@ -188,7 +182,14 @@ bool Generator::statement_valid(statement_node stmt)
         return true;
         break;
     case STMT_IF_THEN:
-        return this->comparison_valid(get<if_then_node>(stmt.statement).comparison) && this->statement_valid(*get<if_then_node>(stmt.statement).statement);
+        if (!this->comparison_valid(get<if_then_node>(stmt.statement).comparison))
+            return false;
+        for (statement_node *stmt : get<if_then_node>(stmt.statement).statements)
+        {
+            if (!this->statement_valid(*stmt))
+                return false;
+        }
+        return true;
         break;
     case STMT_LABEL:
         return true;
@@ -341,41 +342,44 @@ void Generator::collect_labels()
 
 void Generator::collect_if_then(if_then_node if_then)
 {
-    if (if_then.statement->kind == STMT_ASSIGN)
+    for (statement_node *stmt : if_then.statements)
     {
-        assign_node assign = get<assign_node>(if_then.statement->statement);
-        if (!this->expr_valid(assign.expr))
+        if (stmt->kind == STMT_ASSIGN)
         {
-            // can't compile because file a sem error.
-            exit(0);
+            assign_node assign = get<assign_node>(stmt->statement);
+            if (!this->expr_valid(assign.expr))
+            {
+                // can't compile because file a sem error.
+                exit(0);
+            }
+            // if it's a valid ssignment, make sure we store that
+            // this variable isa now defined.
+            if (!in_vector(this->variables, assign.identifier))
+                this->variables.push_back(assign.identifier);
         }
-        // if it's a valid ssignment, make sure we store that
-        // this variable isa now defined.
-        if (!in_vector(this->variables, assign.identifier))
-            this->variables.push_back(assign.identifier);
-    }
-    else if (if_then.statement->kind == STMT_LABEL)
-    {
-        label_node label = get<label_node>(if_then.statement->statement);
-        // if it's a valid ssignment, make sure we store that
-        // this variable isa now defined.
-        if (!in_vector(this->labels, label.label))
-            this->labels.push_back(label.label);
-    }
-    else if (if_then.statement->kind == STMT_IF_THEN)
-    {
-        this->collect_if_then(get<if_then_node>(if_then.statement->statement)); // follow the nest
-        if (!statement_valid(*if_then.statement))
+        else if (stmt->kind == STMT_LABEL)
         {
-            exit(0);
+            label_node label = get<label_node>(stmt->statement);
+            // if it's a valid ssignment, make sure we store that
+            // this variable isa now defined.
+            if (!in_vector(this->labels, label.label))
+                this->labels.push_back(label.label);
         }
-    }
-    else if (if_then.statement->kind == STMT_WHILE_LOOP)
-    {
-        this->collect_while_loops(get<while_loop_node>(if_then.statement->statement)); // follow the nest
-        if (!statement_valid(*if_then.statement))
+        else if (stmt->kind == STMT_IF_THEN)
         {
-            exit(0);
+            this->collect_if_then(get<if_then_node>(stmt->statement)); // follow the nest
+            if (!statement_valid(*stmt))
+            {
+                exit(0);
+            }
+        }
+        else if (stmt->kind == STMT_WHILE_LOOP)
+        {
+            this->collect_while_loops(get<while_loop_node>(stmt->statement)); // follow the nest
+            if (!statement_valid(*stmt))
+            {
+                exit(0);
+            }
         }
     }
 }

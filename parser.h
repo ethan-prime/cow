@@ -79,7 +79,7 @@ struct statement_node;
 struct if_then_node
 {
     comparison_node comparison;
-    statement_node *statement;
+    vector<statement_node *> statements;
 };
 
 struct goto_node

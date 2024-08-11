@@ -1,10 +1,12 @@
-<term> ::= <identifier> | <int_literal> | 'input'
+<term> ::= <identifier> | <int_literal> | 'input' | <bool>
+<bool> ::= 'true' | 'false'
 <expr> ::= <term> | <term> <arithmetic_op> <term>
 <arithmetic_op> ::= '+' | '-' | '*' | '/' | '**' | '%'
 <comparison> ::= <term> <comparison_op> <term>
 <comparison_op> ::= '<' | '>' | '=='
 <assignment> ::= <identifier> = <expr>
-<while_loop> ::= 'while' <comparison> 'do' '{' <statement> [<statement>]* '}'
-<statement> ::= <assignment> | 'if' <comparison> 'then' <statement> | 'goto' <label> | 'print' <term> | <label> | <while_loop>
+<if_then> ::= 'if' <comparison> 'then' '{' [<statement>]* '}'
+<while_loop> ::= 'while' <comparison> 'do' '{' [<statement>]* '}'
+<statement> ::= <assignment> | 'goto' <label> | 'print' ('moo') <term> | <label> | <while_loop> | <if_then>
 <label> ::= ':' <str_literal>
 <program> ::= <statement> [<statement>]*
