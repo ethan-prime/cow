@@ -36,6 +36,39 @@ while i < n do {
 ```
 
 ```
+sqrt.milk: continuously finds the square root of a given input until the user inputs 0.
+```
+```c
+n = input
+while n != 0 do {
+    l = 0
+    r = n
+
+    while ! l > r do {
+        mid = l + r
+        mid = mid / 2
+        squared = mid ** 2
+        if squared == n then {
+            break
+        }
+        if squared > n then {
+            r = mid - 1
+        }
+        if squared < n then {
+            l = mid + 1
+        }
+    }
+
+    if squared > n then {
+        mid = mid - 1
+    }
+
+    print mid
+    n = input
+}
+```
+
+```
 ./leather prime.milk
 
 [leather] successfully compiled:
