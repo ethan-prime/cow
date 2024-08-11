@@ -192,7 +192,7 @@ Token Lexer::next_token()
         this->read(); // advance from :
 
         // get label name
-        while (isalpha(this->current_char))
+        while (isalnum(this->current_char) || this->current_char == '_')
         {
             buf.push_back(this->current_char);
             this->read();
@@ -220,7 +220,7 @@ Token Lexer::next_token()
         string buf = "";
 
         // collect buffer
-        while (isalnum(this->current_char))
+        while (isalnum(this->current_char) || this->current_char == '_')
         {
             buf.push_back(this->current_char);
             this->read();
