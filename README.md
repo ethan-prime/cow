@@ -24,6 +24,7 @@ while i < n do {
         remainder = i % factor
         if remainder == 0 then {
             prime = false
+            break
         }
         factor = factor + 1
     }
