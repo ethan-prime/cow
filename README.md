@@ -63,7 +63,7 @@ while n != 0 do {
         mid = mid - 1
     }
 
-    print mid
+    moo mid
     n = input
 }
 ```
