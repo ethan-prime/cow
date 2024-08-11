@@ -163,6 +163,10 @@ void Generator::if_then_to_asm(if_then_node if_then)
     this->current_if_index++;
     for (statement_node *stmt : if_then.statements)
     {
+        if (stmt->kind == STMT_BREAK)
+        {
+            file << "   jmp .ENDWHILE" << this->current_while_index - 1 << endl;
+        }
         statement_to_asm(*stmt);
     }
     file << ".ENDIF" << endif << ":" << endl;
@@ -205,6 +209,9 @@ bool Generator::statement_valid(statement_node stmt)
             if (!this->statement_valid(*stmt))
                 return false;
         }
+        return true;
+        break;
+    case STMT_BREAK:
         return true;
         break;
     default:
@@ -695,6 +702,10 @@ void Generator::while_loop_to_asm(while_loop_node while_loop)
     this->current_while_index++;
     for (statement_node *stmt : while_loop.statements)
     {
+        if (stmt->kind == STMT_BREAK)
+        {
+            file << "   jmp .ENDWHILE" << endwhile << endl;
+        }
         statement_to_asm(*stmt);
     }
     // if we made it to this point, we loop again!

@@ -20,8 +20,8 @@ void Parser::advance()
 // called when invalid syntax/parsing error
 void Parser::error(const string &expected)
 {
-    cout << "Expected " << expected << endl;
-    cout << "Found token: ";
+    cout << "[leather] compilation failed:" << endl
+         << "   expected " << expected << ", found token ";
     Token token = this->current_token();
     if (token.value != "")
     {
@@ -79,6 +79,11 @@ statement_node Parser::parse_statement()
     else if (this->current_token().kind == WHILE)
     {
         stmt = this->parse_while_loop();
+    }
+    else if (this->current_token().kind == BREAK)
+    {
+        this->advance();
+        stmt.kind = STMT_BREAK;
     }
     else
     {
@@ -444,6 +449,9 @@ void print_program(program_node program)
         case STMT_WHILE_LOOP:
             print_while_loop(get<while_loop_node>(stmt.statement));
             break;
+        case STMT_BREAK:
+            cout << "BREAK" << endl;
+            break;
         default:
             break;
         }
@@ -552,19 +560,19 @@ void print_if_then(if_then_node if_then)
 {
     if (if_then.comparison.kind == COMP_LESS_THAN)
     {
-        cout << "WHILE " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value << " < " << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " DO" << " {" << endl;
+        cout << "IF " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value << " < " << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " THEN" << " {" << endl;
     }
     else if (if_then.comparison.kind == COMP_GREATER_THAN)
     {
-        cout << "WHILE " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value << " > " << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " DO" << " {" << endl;
+        cout << "IF " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value << " > " << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " THEN" << " {" << endl;
     }
     else if (if_then.comparison.kind == COMP_EQUAL)
     {
-        cout << "WHILE " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value << " == " << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " DO" << " {" << endl;
+        cout << "IF " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value << " == " << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " THEN" << " {" << endl;
     }
     else
     {
-        cout << "WHILE " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value << " ?? " << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " DO" << " {" << endl;
+        cout << "IF " << get<term_binary_node>(if_then.comparison.binary_expr).lhs.value << " ?? " << get<term_binary_node>(if_then.comparison.binary_expr).rhs.value << " THEN" << " {" << endl;
     }
     for (statement_node *stmt : if_then.statements)
     {
@@ -587,6 +595,9 @@ void print_if_then(if_then_node if_then)
             break;
         case STMT_WHILE_LOOP:
             print_while_loop(get<while_loop_node>(stmt->statement));
+            break;
+        case STMT_BREAK:
+            cout << "BREAK" << endl;
             break;
         default:
             break;
@@ -634,6 +645,9 @@ void print_while_loop(while_loop_node while_loop)
             break;
         case STMT_WHILE_LOOP:
             print_while_loop(get<while_loop_node>(stmt->statement));
+            break;
+        case STMT_BREAK:
+            cout << "BREAK" << endl;
             break;
         default:
             break;

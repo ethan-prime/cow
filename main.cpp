@@ -23,8 +23,6 @@ int main(int argc, char *argv[])
         exit(0);
     }
 
-    cout << "[leather] " << file_name << " -> " << output_name << endl;
-
     string buffer = read_file(file_name);
     Lexer lexer(buffer);
 
@@ -37,6 +35,9 @@ int main(int argc, char *argv[])
 
     Generator generator(p, output_name);
     generator.to_asm();
+
+    cout << "[leather] successfully compiled: " << endl
+         << "    " << file_name << " -> " << output_name << endl;
 
     return 0;
 }

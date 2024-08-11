@@ -36,7 +36,9 @@ while i < n do {
 
 ```
 ./leather prime.milk
-complies to...
+
+[leather] successfully compiled:
+    prime.milk -> prime.s
 ```
 
 ```assembly
@@ -134,6 +136,7 @@ _start:
    jz .ENDIF0
    movq $0, %rax
    movq %rax, -48(%rbp)
+   jmp .ENDWHILE2
 .ENDIF0:
    movq -40(%rbp), %rax
    mov %rax, %rcx
@@ -224,7 +227,6 @@ ld prime.o -o prime
 ```
 
 ```
-stdout reads:
 100 # input
 2
 3

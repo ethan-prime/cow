@@ -65,6 +65,8 @@ string Token::repr()
         return "true";
     case BOOL_FALSE:
         return "false";
+    case BREAK:
+        return "break";
     default:
         return "moo! something went wrong when tokenizing...";
     }

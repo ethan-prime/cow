@@ -16,6 +16,7 @@ enum statement_type
     STMT_PRINT, // make this a function in later versions?
     STMT_LABEL,
     STMT_WHILE_LOOP,
+    STMT_BREAK,
 };
 
 enum expr_type

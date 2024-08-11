@@ -92,6 +92,11 @@ bool is_keyword(const string &buf, token_type &kind)
         kind = BOOL_FALSE;
         return true;
     }
+    else if (buf == "break")
+    {
+        kind = BREAK;
+        return true;
+    }
     else
     {
         return false;

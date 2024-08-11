@@ -35,6 +35,7 @@ enum token_type
     END_OF_FILE,
     BOOL_TRUE,
     BOOL_FALSE,
+    BREAK,
 };
 
 class Token

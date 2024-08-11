@@ -7,6 +7,6 @@
 <assignment> ::= <identifier> = <expr>
 <if_then> ::= 'if' <comparison> 'then' '{' [<statement>]* '}'
 <while_loop> ::= 'while' <comparison> 'do' '{' [<statement>]* '}'
-<statement> ::= <assignment> | 'goto' <label> | 'print' ('moo') <term> | <label> | <while_loop> | <if_then>
+<statement> ::= <assignment> | 'goto' <label> | 'print' ('moo') <term> | <label> | <while_loop> | <if_then> | 'break'
 <label> ::= ':' <str_literal>
 <program> ::= <statement> [<statement>]*
