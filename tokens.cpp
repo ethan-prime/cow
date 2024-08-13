@@ -75,6 +75,8 @@ string Token::repr()
         return "keyw_real";
     case KEYW_BOOL:
         return "keyw_bool";
+    case OP_RIGHT_SHIFT:
+        return "op_right_shift";
     default:
         return "moo! something went wrong when tokenizing...";
     }

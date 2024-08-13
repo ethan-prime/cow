@@ -1,7 +1,7 @@
 <term> ::= <identifier> | <int_literal> | 'input' | <bool>
 <bool> ::= 'true' | 'false'
 <expr> ::= <term> | <term> <arithmetic_op> <term>
-<arithmetic_op> ::= '+' | '-' | '*' | '/' | '**' | '%'
+<arithmetic_op> ::= '+' | '-' | '*' | '/' | '**' | '%' | '>>'
 <comparison> ::= <term> <comparison_op> <term>
 <comparison_op> ::= '<' | '>' | '=='
 <type> ::= 'int' | 'double' | 'bool'?

@@ -29,6 +29,7 @@ enum expr_type
     BINARY_EXPR_DIV,
     BINARY_EXPR_MOD,
     BINARY_EXPR_EXP,
+    BINARY_EXPR_RIGHT_SHIFT
 };
 
 enum term_kind

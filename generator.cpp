@@ -97,6 +97,39 @@ void Generator::to_asm()
     file << ".endexp:" << endl;
     file << "   ret" << endl;
 
+    file << endl;
+    file << "double_to_ascii:" << endl;
+    file << "   movsd %xmm0, %xmm1" << endl;
+    file << "   cvttsd2si %xmm1, %r9" << endl;
+    file << "   movq $10000000000, %rax" << endl;
+    file << "   cvtsi2sd %rax, %xmm1" << endl;
+    file << "   mulsd %xmm1, %xmm0" << endl;
+    file << "   cvttsd2si %xmm0, %rax" << endl;
+    file << "   movq $10000000000, %r8" << endl;
+    file << "   xor %rdx, %rdx" << endl;
+    file << "   div %r8" << endl;
+    file << "   mov %rdx, %rax" << endl;
+    file << ".double_to_ascii_loop:" << endl;
+    file << "   mov %rax, %rbx" << endl;
+    file << "   test %rax, %rax" << endl;
+    file << "   jz .double_to_ascii_loop_end" << endl;
+    file << "   xor %rdx, %rdx" << endl;
+    file << "   movq $10, %r8" << endl;
+    file << "   div %r8" << endl;
+    file << "   test %rdx, %rdx" << endl;
+    file << "   jz .double_to_ascii_loop" << endl;
+    file << ".double_to_ascii_loop_end:" << endl;
+    file << "   mov %rbx, %rax" << endl;
+    file << "   call int_to_ascii" << endl;
+    file << "   mov %rsi, %rcx" << endl;
+    file << "   mov %rdx, %rsi" << endl;
+    file << "   dec %rcx" << endl;
+    file << "   movb $46, (%rcx)" << endl;
+    file << "   inc %rsi" << endl;
+    file << "   dec %rcx" << endl;
+    file << "   mov %r9, %rax" << endl;
+    file << "   call int_to_ascii" << endl;
+    file << "   ret" << endl;
     file.close();
 }
 
@@ -299,7 +332,7 @@ bool Generator::expr_valid(expr_node expr)
     {
         return this->term_valid(get<term_node>(expr.expr));
     }
-    else if (expr.kind == BINARY_EXPR_PLUS || expr.kind == BINARY_EXPR_MINUS || expr.kind == BINARY_EXPR_MULT || expr.kind == BINARY_EXPR_DIV || expr.kind == BINARY_EXPR_MOD || expr.kind == BINARY_EXPR_EXP)
+    else if (expr.kind == BINARY_EXPR_PLUS || expr.kind == BINARY_EXPR_MINUS || expr.kind == BINARY_EXPR_MULT || expr.kind == BINARY_EXPR_DIV || expr.kind == BINARY_EXPR_MOD || expr.kind == BINARY_EXPR_EXP || expr.kind == BINARY_EXPR_RIGHT_SHIFT)
     {
         return this->term_valid(get<term_binary_node>(expr.expr).lhs) && this->term_valid(get<term_binary_node>(expr.expr).rhs);
     }
@@ -681,6 +714,15 @@ identifier_type Generator::expr_to_asm(expr_node expr)
         file << "   call exp" << endl;
         return TYPE_INT;
     }
+    else if (expr.kind == BINARY_EXPR_RIGHT_SHIFT)
+    {
+        term_binary_node binary_expr = get<term_binary_node>(expr.expr);
+        term_to_asm(binary_expr.rhs);
+        file << "   mov %rax, %rcx" << endl;
+        term_to_asm(binary_expr.lhs);
+        file << "   shr %rcx, %rax" << endl;
+        return TYPE_INT;
+    }
     return TYPE_INVALID;
 }
 
@@ -746,6 +788,7 @@ identifier_type Generator::term_to_asm(term_node term, identifier_type expected)
     else if (term.kind == TERM_INPUT)
     {
         input_to_asm(term);
+        return TYPE_INT;
     }
     else
     {
@@ -802,7 +845,7 @@ void Generator::comparison_to_asm(comparison_node comp)
 void Generator::print_to_asm(print_node print)
 {
     // get term that must be printed
-    term_to_asm(print.term);
+    identifier_type expected = term_to_asm(print.term);
 
     // assume result is in %rax.
     // however, it is an actual integer but we
@@ -817,11 +860,15 @@ void Generator::print_to_asm(print_node print)
     file << "   addq $" << this->buffer_ptr + 63 << ", %rcx" << endl;
     file << "   movq $0x0A, (%rcx)" << endl; // newline character at end file str
     file << "   dec %rcx" << endl;
-    file << "   call int_to_ascii" << endl;
-    // sys_write: %rax = 1; %rdi = unsigned int fd; %rsi = const char *buf; %rdx = size_t count;
 
-    // now we assume that our buffer ptr is in %rsi and the length is in %rdx.
-    // time for a syscall
+    if (expected == TYPE_INT)
+    {
+        file << "   call int_to_ascii" << endl;
+    }
+    else if (expected == TYPE_REAL)
+    {
+        file << "   call double_to_ascii" << endl;
+    }
 
     file << "   movq $1, %rax" << endl;
     file << "   movq $1, %rdi" << endl;

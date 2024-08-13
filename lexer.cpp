@@ -137,6 +137,11 @@ Token Lexer::next_token()
     else if (this->current_char == '>')
     {
         this->read();
+        if (this->current_char == '>')
+        {
+            this->read();
+            return Token(OP_RIGHT_SHIFT, "", this->line_number);
+        }
         return Token(OP_GT, "", this->line_number);
     }
     else if (this->current_char == '+')
