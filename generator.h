@@ -39,9 +39,9 @@ public:
     void assign_to_asm(assign_node assign);
     void if_then_to_asm(if_then_node if_then);
     void print_to_asm(print_node print);
-    void expr_to_asm(expr_node expr);
+    identifier_type expr_to_asm(expr_node expr);
     void comparison_to_asm(comparison_node comp);
-    void term_to_asm(term_node term);
+    identifier_type term_to_asm(term_node term, identifier_type expect = TYPE_INT);
     void input_to_asm(term_node term);
     void while_loop_to_asm(while_loop_node while_loop);
     void declaration_to_asm(declaration_node decl);
@@ -69,6 +69,8 @@ public:
     // checks if a term has undefined variables (semantic errors)
     bool term_valid(term_node term);
     bool is_defined(string var);
+    identifier_type get_type(string var);
+    identifier_type expected_binary_expr_result(term_binary_node binary_expr);
 };
 
 template <typename T>

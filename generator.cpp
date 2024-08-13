@@ -161,11 +161,17 @@ void Generator::assign_to_asm(assign_node assign)
         exit(0);
     }
 
-    // we assume that the result file the expr is in %rax OR %xmm0.
-    expr_to_asm(assign.expr);
     int index = this->variable_index(assign.identifier);
 
     identifier_type t = this->variables[index].type;
+
+    identifier_type expected = expr_to_asm(assign.expr);
+    if (t != expected)
+    {
+        cout << "[leather] compilation error:" << endl
+             << "    " << "type mistmatch between expected expression when declaring variable \'" << assign.identifier << "\'" << endl;
+        exit(0);
+    }
 
     if (t == TYPE_BOOL || t == TYPE_INT)
     {
@@ -201,8 +207,16 @@ void Generator::if_then_to_asm(if_then_node if_then)
 void Generator::declaration_to_asm(declaration_node decl)
 {
     // we assume that the result file the expr is in %rax OR %xmm0.
-    expr_to_asm(decl.expr);
+
     int index = this->variable_index(decl.identifier);
+
+    identifier_type expected = expr_to_asm(decl.expr);
+    if (decl.type != expected)
+    {
+        cout << "[leather] compilation error:" << endl
+             << "    " << "type mistmatch between expected expression when declaring variable \'" << decl.identifier << "\'" << endl;
+        exit(0);
+    }
 
     if (decl.type == TYPE_BOOL || decl.type == TYPE_INT)
     {
@@ -533,56 +547,111 @@ int Generator::variable_index(string var)
     return -1;
 }
 
-void Generator::expr_to_asm(expr_node expr)
+identifier_type Generator::expr_to_asm(expr_node expr)
 {
     // WE WANT TO STORE INT RESULTS IN %rax AND REAL RESULTS IN %xmm0.
     if (expr.kind == UNARY_EXPR)
     {
-        term_to_asm(get<term_node>(expr.expr));
-        // result is already in %rax.
+        identifier_type expected = term_to_asm(get<term_node>(expr.expr));
+        return expected;
+        // result is already in %rax or %xmm0.
     }
     else if (expr.kind == BINARY_EXPR_PLUS)
     {
         term_binary_node binary_expr = get<term_binary_node>(expr.expr);
-        term_to_asm(binary_expr.lhs);
-        // assume lhs result in %rax. let's store in %rcx for now.
-        file << "   mov %rax, %rcx" << endl;
-        term_to_asm(binary_expr.rhs);
-        // now we have to add them
-        file << "   addq %rcx, %rax" << endl;
-        // notice result is in %rax.
+        identifier_type expected = this->expected_binary_expr_result(binary_expr);
+
+        if (expected == TYPE_INT)
+        {
+            term_to_asm(binary_expr.lhs);
+            // assume lhs result in %rax. let's store in %rcx for now.
+            file << "   mov %rax, %rcx" << endl;
+            term_to_asm(binary_expr.rhs);
+            // now we have to add them
+            file << "   addq %rcx, %rax" << endl;
+            // notice result is in %rax.
+        }
+        else if (expected == TYPE_REAL)
+        {
+            term_to_asm(binary_expr.lhs, expected = TYPE_REAL);
+            // assume lhs result in %xmm0. let's store in %xmm1 for now.
+            file << "   movsd %xmm0, %xmm1" << endl;
+            term_to_asm(binary_expr.rhs, expected = TYPE_REAL);
+            // now we have to add them
+            file << "   addsd %xmm1, %xmm0" << endl;
+            // notice result is in %xmm0.
+        }
+
+        return expected;
     }
     else if (expr.kind == BINARY_EXPR_MINUS)
     {
         term_binary_node binary_expr = get<term_binary_node>(expr.expr);
-        term_to_asm(binary_expr.rhs);
-        // assume rhs result in %rax. let's store in %rcx for now.
-        file << "   mov %rax, %rcx" << endl;
-        term_to_asm(binary_expr.lhs);
-        // now we have to subtract them
-        file << "   subq %rcx, %rax" << endl;
-        // notice result is in %rax.
+        identifier_type expected = this->expected_binary_expr_result(binary_expr);
+
+        if (expected == TYPE_INT)
+        {
+            term_to_asm(binary_expr.rhs);
+            // assume rhs result in %rax. let's store in %rcx for now.
+            file << "   mov %rax, %rcx" << endl;
+            term_to_asm(binary_expr.lhs);
+            // now we have to subtract them
+            file << "   subq %rcx, %rax" << endl;
+            // notice result is in %rax.
+        }
+        else if (expected == TYPE_REAL)
+        {
+            term_to_asm(binary_expr.rhs, expected = TYPE_REAL);
+            file << "   movsd %xmm0, %xmm1" << endl;
+            term_to_asm(binary_expr.lhs, expected = TYPE_REAL);
+            file << "   subsd %xmm1, %xmm0" << endl;
+        }
+        return expected;
     }
     else if (expr.kind == BINARY_EXPR_MULT)
     {
         term_binary_node binary_expr = get<term_binary_node>(expr.expr);
-        term_to_asm(binary_expr.lhs);
-        // assume lhs result in %rax. let's store in %rcx for now.
-        file << "   mov %rax, %rcx" << endl;
-        term_to_asm(binary_expr.rhs);
-        // now we have to multiply them
-        file << "   mul %rcx" << endl;
+        identifier_type expected = this->expected_binary_expr_result(binary_expr);
+
+        if (expected == TYPE_INT)
+        {
+            term_to_asm(binary_expr.lhs);
+            file << "   mov %rax, %rcx" << endl;
+            term_to_asm(binary_expr.rhs);
+            file << "   mul %rcx" << endl;
+        }
+        else if (expected == TYPE_REAL)
+        {
+            term_to_asm(binary_expr.rhs, expected = TYPE_REAL);
+            file << "   movsd %xmm0, %xmm1" << endl;
+            term_to_asm(binary_expr.lhs, expected = TYPE_REAL);
+            file << "   mulsd %xmm1, %xmm0" << endl;
+        }
+        return expected;
     }
     else if (expr.kind == BINARY_EXPR_DIV)
     {
         term_binary_node binary_expr = get<term_binary_node>(expr.expr);
-        term_to_asm(binary_expr.rhs);
-        // assume rhs result (divisor) in %rax. let's store in %rcx for now.
-        file << "   mov %rax, %rcx" << endl;
-        term_to_asm(binary_expr.lhs);
-        // now we have to divide them
-        file << "   xor %rdx, %rdx" << endl; // clear for div instr
-        file << "   div %rcx" << endl;
+        identifier_type expected = this->expected_binary_expr_result(binary_expr);
+
+        if (expected == TYPE_INT)
+        {
+            term_to_asm(binary_expr.rhs);
+            // assume rhs result (divisor) in %rax. let's store in %rcx for now.
+            file << "   mov %rax, %rcx" << endl;
+            term_to_asm(binary_expr.lhs);
+            // now we have to divide them
+            file << "   xor %rdx, %rdx" << endl; // clear for div instr
+            file << "   div %rcx" << endl;
+        }
+        else if (expected == TYPE_REAL)
+        {
+            term_to_asm(binary_expr.rhs, expected = TYPE_REAL);
+            file << "   movsd %xmm0, %xmm1" << endl;
+            term_to_asm(binary_expr.lhs, expected = TYPE_REAL);
+            file << "   divsd %xmm1, %xmm0" << endl;
+        }
+        return expected;
     }
     else if (expr.kind == BINARY_EXPR_MOD)
     {
@@ -596,6 +665,7 @@ void Generator::expr_to_asm(expr_node expr)
         file << "   div %rcx" << endl;
         // the remainder is in %rdx, move to %rax.
         file << "   mov %rdx, %rax" << endl;
+        return TYPE_INT;
     }
     else if (expr.kind == BINARY_EXPR_EXP)
     {
@@ -609,7 +679,9 @@ void Generator::expr_to_asm(expr_node expr)
         // perform exponentiation with result in %rax
         file << "   movq $1, %rax" << endl;
         file << "   call exp" << endl;
+        return TYPE_INT;
     }
+    return TYPE_INVALID;
 }
 
 void Generator::input_to_asm(term_node term)
@@ -636,25 +708,40 @@ void Generator::input_to_asm(term_node term)
     // input value is now in %rax.
 }
 
-void Generator::term_to_asm(term_node term)
+identifier_type Generator::term_to_asm(term_node term, identifier_type expected)
 {
     // we need to store the result in %rax or %xmm0 if decimal.
     if (term.kind == TERM_IDENTIFIER)
     {
-        // get its value, load from its index!
         unsigned int index = this->variable_index(term.value);
-        file << "   movq -" << index * 8 + 8 << "(%rbp)" << ", %rax" << endl;
+        if (this->get_type(term.value) == TYPE_REAL)
+        {
+            // real! pi = 3.14
+            file << "   movsd -" << index * 8 + 8 << "(%rbp)" << ", %xmm0" << endl;
+            return TYPE_REAL;
+        }
+        else if (this->get_type(term.value) == TYPE_INT)
+        {
+            // get its value, load from its index!
+            file << "   movq -" << index * 8 + 8 << "(%rbp)" << ", %rax" << endl;
+            // if we are expecting a real number, we need to convert this and store it in %xmm0.
+            if (expected == TYPE_REAL)
+                file << "   cvtsi2sd %rax, %xmm0" << endl;
+            return TYPE_INT;
+        }
     }
     else if (term.kind == TERM_INT_LITERAL)
     {
         file << "   movq $" << term.value << ", %rax" << endl;
-        return;
+        if (expected == TYPE_REAL)
+            file << "   cvtsi2sd %rax, %xmm0" << endl;
+        return TYPE_INT;
     }
     else if (term.kind == TERM_REAL_LITERAL)
     {
         file << "   movabs $" << convertToHex(term.value) << ", %rax" << endl;
         file << "   movq %rax, %xmm0" << endl;
-        return;
+        return TYPE_REAL;
     }
     else if (term.kind == TERM_INPUT)
     {
@@ -662,8 +749,9 @@ void Generator::term_to_asm(term_node term)
     }
     else
     {
-        return;
+        return TYPE_INT;
     }
+    return TYPE_INVALID;
 }
 
 void Generator::comparison_to_asm(comparison_node comp)
@@ -764,4 +852,33 @@ void Generator::while_loop_to_asm(while_loop_node while_loop)
     // if we made it to this point, we loop again!
     file << "   jmp .STARTWHILE" << endwhile << endl;
     file << ".ENDWHILE" << endwhile << ":" << endl;
+}
+
+identifier_type Generator::get_type(string var)
+{
+    for (auto v : this->variables)
+    {
+        if (v.identifier == var)
+        {
+            return v.type;
+        }
+    }
+    return TYPE_INVALID;
+}
+
+// returns the expected type of the result of a binary expression.
+identifier_type Generator::expected_binary_expr_result(term_binary_node binary_expr)
+{
+    // check for identifiers
+    if (binary_expr.lhs.kind == TERM_IDENTIFIER)
+    {
+        if (this->get_type(binary_expr.lhs.value) == TYPE_REAL)
+            return TYPE_REAL;
+    }
+    if (binary_expr.rhs.kind == TERM_IDENTIFIER)
+    {
+        if (this->get_type(binary_expr.rhs.value) == TYPE_REAL)
+            return TYPE_REAL;
+    }
+    return (binary_expr.lhs.kind == TERM_REAL_LITERAL || binary_expr.rhs.kind == TERM_REAL_LITERAL) ? TYPE_REAL : TYPE_INT;
 }

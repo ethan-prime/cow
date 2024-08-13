@@ -43,7 +43,8 @@ enum identifier_type
 {
     TYPE_INT,
     TYPE_REAL,
-    TYPE_BOOL
+    TYPE_BOOL,
+    TYPE_INVALID,
 };
 
 struct term_node
