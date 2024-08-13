@@ -1,4 +1,4 @@
-<term> ::= <identifier> | <int_literal> | 'input' | <bool>
+<term> ::= <identifier> | <int_literal> | 'input' | <bool> | <real_literal>
 <bool> ::= 'true' | 'false'
 <expr> ::= <term> | <term> <arithmetic_op> <term>
 <arithmetic_op> ::= '+' | '-' | '*' | '/' | '**' | '%' | '>>'
