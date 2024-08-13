@@ -5,14 +5,15 @@
 
 # Example: 
 ```
-sqrt_newtons_method.milk: uses newtons method to continuously calculate the
-square root of a number to 10 decimal points until the user enters 0,
-based on this equation:
+sqrt_newtons_method.milk
 ```
+Uses newtons method to continuously calculate thesquare root of a number to 10 decimal points until the user enters 0, based on this equation:
 
 ```math
 $$x_{n+1} = \frac{1}{2}\left(x _{n} + \frac{a}{x_{n}} \right)$$
 ```
+<br/>
+
 ```c
 int! num = input
 
