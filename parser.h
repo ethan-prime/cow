@@ -17,6 +17,7 @@ enum statement_type
     STMT_LABEL,
     STMT_WHILE_LOOP,
     STMT_BREAK,
+    STMT_DECLARATION
 };
 
 enum expr_type
@@ -34,7 +35,15 @@ enum term_kind
 {
     TERM_INPUT,
     TERM_INT_LITERAL,
+    TERM_REAL_LITERAL,
     TERM_IDENTIFIER,
+};
+
+enum identifier_type
+{
+    TYPE_INT,
+    TYPE_REAL,
+    TYPE_BOOL
 };
 
 struct term_node
@@ -58,6 +67,13 @@ struct expr_node
 struct assign_node
 {
     string identifier;
+    expr_node expr;
+};
+
+struct declaration_node
+{
+    string identifier;
+    identifier_type type;
     expr_node expr;
 };
 
@@ -107,7 +123,7 @@ struct while_loop_node
 struct statement_node
 {
     statement_type kind;
-    variant<assign_node, if_then_node, goto_node, print_node, label_node, while_loop_node> statement;
+    variant<assign_node, if_then_node, goto_node, print_node, label_node, while_loop_node, declaration_node> statement;
 };
 
 struct program_node
@@ -147,6 +163,7 @@ public:
     statement_node parse_print();
     statement_node parse_label();
     statement_node parse_while_loop();
+    statement_node parse_declaration();
 
     expr_node parse_expr();
 
@@ -157,6 +174,7 @@ public:
 
 // prints AST of program
 void print_program(program_node program);
+void print_statement(statement_node stmt);
 void print_assign(assign_node assign);
 void print_expr(expr_node expr);
 void print_goto(goto_node goto_);

@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
+#include "util.h"
 
 using namespace std;
 
@@ -18,7 +19,7 @@ Generator::Generator(program_node program, string &output_filename) : program(pr
 // generates x86 assembly instructions based on program_node/AST.
 void Generator::to_asm()
 {
-    this->collect_variables();
+    this->collect_variables(this->program.statements);
     this->collect_labels();
     this->collect_all_while_loops();
     this->collect_all_if_thens();
@@ -122,6 +123,9 @@ void Generator::statement_to_asm(statement_node stmt)
     case STMT_WHILE_LOOP:
         while_loop_to_asm(get<while_loop_node>(stmt.statement));
         break;
+    case STMT_DECLARATION:
+        declaration_to_asm(get<declaration_node>(stmt.statement));
+        break;
     default:
         break;
     }
@@ -143,12 +147,34 @@ void Generator::goto_to_asm(goto_node goto_)
 
 void Generator::assign_to_asm(assign_node assign)
 {
-    // we assume that the result file the expr is in %rax.
-    expr_to_asm(assign.expr);
 
+    if (!this->expr_valid(assign.expr))
+    {
+        // sem error
+        exit(0);
+    }
+
+    if (!this->is_defined(assign.identifier))
+    {
+        cout << "[leather] compilation error:" << endl
+             << "    variable \"" << assign.identifier << "\" is not defined." << endl;
+        exit(0);
+    }
+
+    // we assume that the result file the expr is in %rax OR %xmm0.
+    expr_to_asm(assign.expr);
     int index = this->variable_index(assign.identifier);
-    // store variable at %rbp - index*8
-    file << "   movq %rax, -" << index * 8 + 8 << "(%rbp)" << endl;
+
+    identifier_type t = this->variables[index].type;
+
+    if (t == TYPE_BOOL || t == TYPE_INT)
+    {
+        file << "   movq %rax, -" << index * 8 + 8 << "(%rbp)" << endl;
+    }
+    else if (t == TYPE_REAL)
+    {
+        file << "   movsd %xmm0, -" << index * 8 + 8 << "(%rbp)" << endl;
+    }
 }
 
 void Generator::if_then_to_asm(if_then_node if_then)
@@ -172,6 +198,22 @@ void Generator::if_then_to_asm(if_then_node if_then)
     file << ".ENDIF" << endif << ":" << endl;
 }
 
+void Generator::declaration_to_asm(declaration_node decl)
+{
+    // we assume that the result file the expr is in %rax OR %xmm0.
+    expr_to_asm(decl.expr);
+    int index = this->variable_index(decl.identifier);
+
+    if (decl.type == TYPE_BOOL || decl.type == TYPE_INT)
+    {
+        file << "   movq %rax, -" << index * 8 + 8 << "(%rbp)" << endl;
+    }
+    else if (decl.type == TYPE_REAL)
+    {
+        file << "   movsd %xmm0, -" << index * 8 + 8 << "(%rbp)" << endl;
+    }
+}
+
 // make sure we never access any undeclared vars,
 // and add any valid variables to our variables vector.
 bool Generator::statement_valid(statement_node stmt)
@@ -179,7 +221,7 @@ bool Generator::statement_valid(statement_node stmt)
     switch (stmt.kind)
     {
     case STMT_ASSIGN:
-        return this->expr_valid(get<assign_node>(stmt.statement).expr);
+        return this->expr_valid(get<assign_node>(stmt.statement).expr) && is_defined(get<assign_node>(stmt.statement).identifier);
         break;
     case STMT_GOTO:
         return this->goto_valid(get<goto_node>(stmt.statement));
@@ -214,6 +256,8 @@ bool Generator::statement_valid(statement_node stmt)
     case STMT_BREAK:
         return true;
         break;
+    case STMT_DECLARATION:
+        return this->expr_valid(get<declaration_node>(stmt.statement).expr);
     default:
         cout << "possible error checking if stmt is valid" << endl;
         return false;
@@ -261,6 +305,8 @@ bool Generator::term_valid(term_node term)
         return true;
     case TERM_INT_LITERAL:
         return true;
+    case TERM_REAL_LITERAL:
+        return true;
     case TERM_IDENTIFIER:
         return this->is_defined(term.value);
     default:
@@ -276,7 +322,8 @@ bool Generator::goto_valid(goto_node goto_)
         if (l == goto_.label)
             return true;
     }
-    cout << "SEMANTIC ERROR: label \"" << goto_.label << "\" is not defined." << endl;
+    cout << "[leather] compilation failure:" << endl
+         << "   label \"" << goto_.label << "\" is not defined." << endl;
     return false;
 }
 
@@ -285,10 +332,9 @@ bool Generator::is_defined(string var)
 {
     for (auto v : this->variables)
     {
-        if (v == var)
+        if (v.identifier == var)
             return true;
     }
-    cout << "SEMANTIC ERROR: variable \"" << var << "\" is not defined." << endl;
     return false;
 }
 
@@ -297,22 +343,26 @@ void Generator::update_buffer_ptr()
     this->buffer_ptr = this->variables.size() * 8;
 }
 
-void Generator::collect_variables()
+void Generator::collect_variables(vector<statement_node> stmts)
 {
-    for (auto stmt : this->program.statements)
+    for (auto stmt : stmts)
     {
-        if (stmt.kind == STMT_ASSIGN)
+        if (stmt.kind == STMT_DECLARATION)
         {
-            assign_node assign = get<assign_node>(stmt.statement);
-            if (!this->expr_valid(assign.expr))
+            declaration_node decl = get<declaration_node>(stmt.statement);
+            if (!this->expr_valid(decl.expr))
             {
                 // can't compile because file a sem error.
                 exit(0);
             }
-            // if it's a valid ssignment, make sure we store that
-            // this variable isa now defined.
-            if (!in_vector(this->variables, assign.identifier))
-                this->variables.push_back(assign.identifier);
+            // add to our variables vector
+            if (is_defined(decl.identifier))
+            {
+                cout << "[leather] compilation failure:" << endl
+                     << "   attempted redeclaration of variable \'" << decl.identifier << "\'" << endl;
+                exit(0);
+            }
+            this->variables.push_back(variable{decl.identifier, decl.type});
         }
     }
 }
@@ -351,18 +401,16 @@ void Generator::collect_if_then(if_then_node if_then)
 {
     for (statement_node *stmt : if_then.statements)
     {
-        if (stmt->kind == STMT_ASSIGN)
+        if (stmt->kind == STMT_DECLARATION)
         {
-            assign_node assign = get<assign_node>(stmt->statement);
-            if (!this->expr_valid(assign.expr))
+            declaration_node decl = get<declaration_node>(stmt->statement);
+            if (!this->expr_valid(decl.expr))
             {
                 // can't compile because file a sem error.
                 exit(0);
             }
-            // if it's a valid ssignment, make sure we store that
-            // this variable isa now defined.
-            if (!in_vector(this->variables, assign.identifier))
-                this->variables.push_back(assign.identifier);
+            // add to our variables vector
+            this->variables.push_back(variable{decl.identifier, decl.type});
         }
         else if (stmt->kind == STMT_LABEL)
         {
@@ -425,18 +473,16 @@ void Generator::collect_while_loops(while_loop_node while_loop)
 {
     for (statement_node *stmt : while_loop.statements)
     {
-        if (stmt->kind == STMT_ASSIGN)
+        if (stmt->kind == STMT_DECLARATION)
         {
-            assign_node assign = get<assign_node>(stmt->statement);
-            if (!this->expr_valid(assign.expr))
+            declaration_node decl = get<declaration_node>(stmt->statement);
+            if (!this->expr_valid(decl.expr))
             {
                 // can't compile because file a sem error.
                 exit(0);
             }
-            // if it's a valid ssignment, make sure we store that
-            // this variable isa now defined.
-            if (!in_vector(this->variables, assign.identifier))
-                this->variables.push_back(assign.identifier);
+            // add to our variables vector
+            this->variables.push_back(variable{decl.identifier, decl.type});
         }
         else if (stmt->kind == STMT_LABEL)
         {
@@ -480,7 +526,7 @@ int Generator::variable_index(string var)
 {
     for (unsigned int i = 0; i < this->variables.size(); i++)
     {
-        if (this->variables[i] == var)
+        if (this->variables[i].identifier == var)
             return i;
     }
     // not found
@@ -489,6 +535,7 @@ int Generator::variable_index(string var)
 
 void Generator::expr_to_asm(expr_node expr)
 {
+    // WE WANT TO STORE INT RESULTS IN %rax AND REAL RESULTS IN %xmm0.
     if (expr.kind == UNARY_EXPR)
     {
         term_to_asm(get<term_node>(expr.expr));
@@ -591,7 +638,7 @@ void Generator::input_to_asm(term_node term)
 
 void Generator::term_to_asm(term_node term)
 {
-    // we need to store the result in %rax.
+    // we need to store the result in %rax or %xmm0 if decimal.
     if (term.kind == TERM_IDENTIFIER)
     {
         // get its value, load from its index!
@@ -601,6 +648,12 @@ void Generator::term_to_asm(term_node term)
     else if (term.kind == TERM_INT_LITERAL)
     {
         file << "   movq $" << term.value << ", %rax" << endl;
+        return;
+    }
+    else if (term.kind == TERM_REAL_LITERAL)
+    {
+        file << "   movabs $" << convertToHex(term.value) << ", %rax" << endl;
+        file << "   movq %rax, %xmm0" << endl;
         return;
     }
     else if (term.kind == TERM_INPUT)

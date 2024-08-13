@@ -1,6 +1,13 @@
 #include "parser.h"
 #include <fstream>
+#include <string>
 #pragma once
+
+struct variable
+{
+    string identifier;
+    identifier_type type;
+};
 
 class Generator
 {
@@ -8,7 +15,7 @@ private:
     program_node program;
     // stores all the variable names used in the program.
     // helps check for any semantic errors.
-    vector<string> variables;
+    vector<variable> variables;
     vector<string> labels;
     unsigned int current_if_index;
     unsigned int current_while_index;
@@ -37,12 +44,13 @@ public:
     void term_to_asm(term_node term);
     void input_to_asm(term_node term);
     void while_loop_to_asm(while_loop_node while_loop);
+    void declaration_to_asm(declaration_node decl);
 
     // HELPERS
 
     int variable_index(string var);
 
-    void collect_variables();
+    void collect_variables(vector<statement_node> stmts);
     void collect_labels();
     void collect_all_while_loops();
     void collect_all_if_thens();

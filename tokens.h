@@ -9,6 +9,7 @@ enum token_type
     IDENTIFIER,
     STR_LITERAL,
     INT_LITERAL,
+    REAL_LITERAL,
     INPUT,
     PRINT,
     GOTO,
@@ -36,6 +37,9 @@ enum token_type
     BOOL_TRUE,
     BOOL_FALSE,
     BREAK,
+    KEYW_INT,
+    KEYW_BOOL,
+    KEYW_REAL,
 };
 
 class Token

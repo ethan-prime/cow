@@ -97,6 +97,21 @@ bool is_keyword(const string &buf, token_type &kind)
         kind = BREAK;
         return true;
     }
+    else if (buf == "int")
+    {
+        kind = KEYW_INT;
+        return true;
+    }
+    else if (buf == "real")
+    {
+        kind = KEYW_REAL;
+        return true;
+    }
+    else if (buf == "bool")
+    {
+        kind = KEYW_BOOL;
+        return true;
+    }
     else
     {
         return false;
@@ -200,19 +215,34 @@ Token Lexer::next_token()
 
         return Token(LABEL, buf, this->line_number);
     }
-    // int
-    else if (isdigit(this->current_char))
+    // int or real
+    else if (isdigit(this->current_char) || this->current_char == '.')
     {
         string buf = "";
-
+        int is_real = 0;
         // collect int
-        while (isdigit(this->current_char))
+        while (isdigit(this->current_char) || this->current_char == '.')
         {
+            if (this->current_char == '.')
+            {
+                is_real++;
+            }
+            if (is_real > 1)
+            {
+                return Token(REAL_LITERAL, buf, this->line_number);
+            }
             buf.push_back(this->current_char);
             this->read();
         }
 
-        return Token(INT_LITERAL, buf, this->line_number);
+        if (is_real)
+        {
+            return Token(REAL_LITERAL, buf, this->line_number);
+        }
+        else
+        {
+            return Token(INT_LITERAL, buf, this->line_number);
+        }
     }
     // idenitifer or other alpha keyword!
     else if (isalnum(this->current_char))

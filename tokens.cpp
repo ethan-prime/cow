@@ -13,6 +13,8 @@ string Token::repr()
         return "string";
     case INT_LITERAL:
         return "int";
+    case REAL_LITERAL:
+        return "real";
     case INPUT:
         return "input";
     case PRINT:
@@ -67,6 +69,12 @@ string Token::repr()
         return "false";
     case BREAK:
         return "break";
+    case KEYW_INT:
+        return "keyw_int";
+    case KEYW_REAL:
+        return "keyw_real";
+    case KEYW_BOOL:
+        return "keyw_bool";
     default:
         return "moo! something went wrong when tokenizing...";
     }

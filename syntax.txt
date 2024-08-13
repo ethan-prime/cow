@@ -4,6 +4,8 @@
 <arithmetic_op> ::= '+' | '-' | '*' | '/' | '**' | '%'
 <comparison> ::= <term> <comparison_op> <term>
 <comparison_op> ::= '<' | '>' | '=='
+<type> ::= 'int' | 'double' | 'bool'?
+<declaration> ::= <type> '!' <identifier> [= <expr>]
 <assignment> ::= <identifier> = <expr>
 <if_then> ::= 'if' <comparison> 'then' '{' [<statement>]* '}'
 <while_loop> ::= 'while' <comparison> 'do' '{' [<statement>]* '}'

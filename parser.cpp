@@ -85,6 +85,10 @@ statement_node Parser::parse_statement()
         this->advance();
         stmt.kind = STMT_BREAK;
     }
+    else if (this->current_token().kind == KEYW_BOOL || this->current_token().kind == KEYW_INT || this->current_token().kind == KEYW_REAL)
+    {
+        stmt = this->parse_declaration();
+    }
     else
     {
         error("a statement");
@@ -250,6 +254,11 @@ term_node Parser::parse_term()
     else if (this->current_token().kind == INT_LITERAL)
     {
         term.kind = TERM_INT_LITERAL;
+        term.value = this->current_token().value;
+    }
+    else if (this->current_token().kind == REAL_LITERAL)
+    {
+        term.kind = TERM_REAL_LITERAL;
         term.value = this->current_token().value;
     }
     else if (this->current_token().kind == IDENTIFIER)
@@ -424,37 +433,93 @@ statement_node Parser::parse_print()
     return stmt;
 };
 
+statement_node Parser::parse_declaration()
+{
+    statement_node stmt;
+    declaration_node decl;
+    if (this->current_token().kind == KEYW_INT)
+    {
+        decl.type = TYPE_INT;
+        this->advance();
+    }
+    else if (this->current_token().kind == KEYW_REAL)
+    {
+        decl.type = TYPE_REAL;
+        this->advance();
+    }
+    else if (this->current_token().kind == KEYW_BOOL)
+    {
+        decl.type = TYPE_BOOL;
+        this->advance();
+    }
+    else
+    {
+        error("a type");
+    }
+    if (this->current_token().kind == NOT)
+    {
+        // optional "!" for fun :)
+        this->advance();
+    }
+    if (this->current_token().kind == IDENTIFIER)
+    {
+        decl.identifier = this->current_token().value;
+        this->advance();
+    }
+    else
+    {
+        error("an identifier");
+    }
+    if (this->current_token().kind == EQUAL)
+    {
+        this->advance();
+        decl.expr = this->parse_expr();
+    }
+    else
+    {
+        // default values
+        if (decl.type == TYPE_BOOL)
+        {
+            term_node t;
+            t.kind = TERM_INT_LITERAL;
+            t.value = "1"; // true
+            expr_node expr;
+            expr.kind = UNARY_EXPR;
+            expr.expr = t;
+            decl.expr = expr;
+        }
+        else if (decl.type == TYPE_INT)
+        {
+            term_node t;
+            t.kind = TERM_INT_LITERAL;
+            t.value = "0";
+            expr_node expr;
+            expr.kind = UNARY_EXPR;
+            expr.expr = t;
+            decl.expr = expr;
+        }
+        else if (decl.type == TYPE_REAL)
+        {
+            term_node t;
+            t.kind = TERM_REAL_LITERAL;
+            t.value = "0.0";
+            expr_node expr;
+            expr.kind = UNARY_EXPR;
+            expr.expr = t;
+            decl.expr = expr;
+        }
+    }
+    stmt.kind = STMT_DECLARATION;
+    stmt.statement = decl;
+    return stmt;
+}
+
 // prints AST of program
 void print_program(program_node program)
 {
     for (statement_node stmt : program.statements)
     {
-        switch (stmt.kind)
-        {
-        case STMT_ASSIGN:
-            print_assign(get<assign_node>(stmt.statement));
-            break;
-        case STMT_GOTO:
-            print_goto(get<goto_node>(stmt.statement));
-            break;
-        case STMT_IF_THEN:
-            print_if_then(get<if_then_node>(stmt.statement));
-            break;
-        case STMT_LABEL:
-            print_label(get<label_node>(stmt.statement));
-            break;
-        case STMT_PRINT:
-            print_print(get<print_node>(stmt.statement));
-            break;
-        case STMT_WHILE_LOOP:
-            print_while_loop(get<while_loop_node>(stmt.statement));
-            break;
-        case STMT_BREAK:
-            cout << "BREAK" << endl;
-            break;
-        default:
-            break;
-        }
+        print_statement(stmt);
     }
 };
 
@@ -466,6 +531,28 @@ void print_assign(assign_node assign)
 
     cout << endl;
 };
+
+void print_declaration(declaration_node decl)
+{
+    cout << "DECLARE ";
+    switch (decl.type)
+    {
+    case TYPE_BOOL:
+        cout << "(bool) ";
+        break;
+    case TYPE_INT:
+        cout << "(int) ";
+        break;
+    case TYPE_REAL:
+        cout << "(real) ";
+        break;
+    default:
+        cout << "(type?) ";
+    }
+    cout << decl.identifier << " as ";
+    print_expr(decl.expr);
+    cout << endl;
+}
 
 void print_expr(expr_node expr)
 {
@@ -551,6 +638,39 @@ void print_print(print_node print)
     }
 };
 
+void print_statement(statement_node stmt)
+{
+    switch (stmt.kind)
+    {
+    case STMT_ASSIGN:
+        print_assign(get<assign_node>(stmt.statement));
+        break;
+    case STMT_GOTO:
+        print_goto(get<goto_node>(stmt.statement));
+        break;
+    case STMT_IF_THEN:
+        print_if_then(get<if_then_node>(stmt.statement));
+        break;
+    case STMT_LABEL:
+        print_label(get<label_node>(stmt.statement));
+        break;
+    case STMT_PRINT:
+        print_print(get<print_node>(stmt.statement));
+        break;
+    case STMT_WHILE_LOOP:
+        print_while_loop(get<while_loop_node>(stmt.statement));
+        break;
+    case STMT_DECLARATION:
+        print_declaration(get<declaration_node>(stmt.statement));
+        break;
+    case STMT_BREAK:
+        cout << "BREAK" << endl;
+        break;
+    default:
+        break;
+    }
+}
+
 void print_label(label_node label)
 {
     cout << "LABEL " << label.label << endl;
@@ -576,32 +696,7 @@ void print_if_then(if_then_node if_then)
     }
     for (statement_node *stmt : if_then.statements)
     {
-        switch (stmt->kind)
-        {
-        case STMT_ASSIGN:
-            print_assign(get<assign_node>(stmt->statement));
-            break;
-        case STMT_GOTO:
-            print_goto(get<goto_node>(stmt->statement));
-            break;
-        case STMT_IF_THEN:
-            print_if_then(get<if_then_node>(stmt->statement));
-            break;
-        case STMT_LABEL:
-            print_label(get<label_node>(stmt->statement));
-            break;
-        case STMT_PRINT:
-            print_print(get<print_node>(stmt->statement));
-            break;
-        case STMT_WHILE_LOOP:
-            print_while_loop(get<while_loop_node>(stmt->statement));
-            break;
-        case STMT_BREAK:
-            cout << "BREAK" << endl;
-            break;
-        default:
-            break;
-        }
+        print_statement(*stmt);
     }
     cout << "}" << endl;
 };
@@ -626,32 +721,7 @@ void print_while_loop(while_loop_node while_loop)
     }
     for (statement_node *stmt : while_loop.statements)
     {
-        switch (stmt->kind)
-        {
-        case STMT_ASSIGN:
-            print_assign(get<assign_node>(stmt->statement));
-            break;
-        case STMT_GOTO:
-            print_goto(get<goto_node>(stmt->statement));
-            break;
-        case STMT_IF_THEN:
-            print_if_then(get<if_then_node>(stmt->statement));
-            break;
-        case STMT_LABEL:
-            print_label(get<label_node>(stmt->statement));
-            break;
-        case STMT_PRINT:
-            print_print(get<print_node>(stmt->statement));
-            break;
-        case STMT_WHILE_LOOP:
-            print_while_loop(get<while_loop_node>(stmt->statement));
-            break;
-        case STMT_BREAK:
-            cout << "BREAK" << endl;
-            break;
-        default:
-            break;
-        }
+        print_statement(*stmt);
     }
     cout << "}" << endl;
 }
