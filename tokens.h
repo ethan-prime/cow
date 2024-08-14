@@ -41,6 +41,7 @@ enum token_type
     KEYW_BOOL,
     KEYW_REAL,
     OP_RIGHT_SHIFT, // >>
+    FOR,
 };
 
 class Token

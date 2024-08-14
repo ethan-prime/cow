@@ -112,6 +112,11 @@ bool is_keyword(const string &buf, token_type &kind)
         kind = KEYW_BOOL;
         return true;
     }
+    else if (buf == "for")
+    {
+        kind = FOR;
+        return true;
+    }
     else
     {
         return false;
