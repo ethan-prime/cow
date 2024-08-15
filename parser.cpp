@@ -89,6 +89,10 @@ statement_node Parser::parse_statement()
     {
         stmt = this->parse_declaration();
     }
+    else if (this->current_token().kind == FOR)
+    {
+        stmt = this->parse_for_loop();
+    }
     else
     {
         error("a statement");
@@ -146,6 +150,81 @@ statement_node Parser::parse_while_loop()
     statement_node stmt;
     stmt.kind = STMT_WHILE_LOOP;
     stmt.statement = while_loop;
+    return stmt;
+}
+
+// <for_loop> ::= 'for' <declaration> ',' <comparison> ',' <assignment> '{' [<statement>]* '}'
+statement_node Parser::parse_for_loop()
+{
+    declaration_node decl;
+    comparison_node comp;
+    assign_node assign;
+    vector<statement_node *> stmts;
+
+    if (this->current_token().kind == FOR)
+    {
+        this->advance();
+        decl = get<declaration_node>(this->parse_declaration().statement);
+    }
+    else
+    {
+        error("for");
+    }
+    if (this->current_token().kind == SEMICOLON)
+    {
+        this->advance();
+        comp = this->parse_comparison();
+    }
+    else
+    {
+        error(";");
+    }
+    if (this->current_token().kind == SEMICOLON)
+    {
+        this->advance();
+        assign = get<assign_node>(this->parse_assignment().statement);
+    }
+    else
+    {
+        error(";");
+    }
+    if (this->current_token().kind == DO)
+    {
+        this->advance();
+    }
+    else
+    {
+        error("do");
+    }
+    if (this->current_token().kind == OPEN_BRACKET)
+    {
+        this->advance();
+    }
+    else
+    {
+        error("{");
+    }
+    while (this->current_token().kind != CLOSE_BRACKET)
+    {
+        stmts.push_back(new statement_node(this->parse_statement()));
+    }
+    if (this->current_token().kind == CLOSE_BRACKET)
+    {
+        this->advance();
+    }
+    else
+    {
+        error("}");
+    }
+    for_loop_node for_loop;
+    for_loop.comparison = comp;
+    for_loop.assign = assign;
+    for_loop.declaration = decl;
+    for_loop.statements = stmts;
+
+    statement_node stmt;
+    stmt.kind = STMT_FOR_LOOP;
+    stmt.statement = for_loop;
     return stmt;
 }
 
@@ -676,6 +755,9 @@ void print_statement(statement_node stmt)
     case STMT_WHILE_LOOP:
         print_while_loop(get<while_loop_node>(stmt.statement));
         break;
+    case STMT_FOR_LOOP:
+        print_for_loop(get<for_loop_node>(stmt.statement));
+        break;
     case STMT_DECLARATION:
         print_declaration(get<declaration_node>(stmt.statement));
         break;
@@ -736,6 +818,35 @@ void print_while_loop(while_loop_node while_loop)
         cout << "WHILE " << get<term_binary_node>(while_loop.comparison.binary_expr).lhs.value << " ?? " << get<term_binary_node>(while_loop.comparison.binary_expr).rhs.value << " DO" << " {" << endl;
     }
     for (statement_node *stmt : while_loop.statements)
+    {
+        print_statement(*stmt);
+    }
+    cout << "}" << endl;
+}
+
+void print_for_loop(for_loop_node for_loop)
+{
+    cout << "FOR ";
+    print_declaration(for_loop.declaration);
+    if (for_loop.comparison.kind == COMP_LESS_THAN)
+    {
+        cout << get<term_binary_node>(for_loop.comparison.binary_expr).lhs.value << " < " << get<term_binary_node>(for_loop.comparison.binary_expr).rhs.value << "; ";
+    }
+    else if (for_loop.comparison.kind == COMP_GREATER_THAN)
+    {
+        cout << get<term_binary_node>(for_loop.comparison.binary_expr).lhs.value << " > " << get<term_binary_node>(for_loop.comparison.binary_expr).rhs.value << "; ";
+    }
+    else if (for_loop.comparison.kind == COMP_EQUAL)
+    {
+        cout << get<term_binary_node>(for_loop.comparison.binary_expr).lhs.value << " == " << get<term_binary_node>(for_loop.comparison.binary_expr).rhs.value << "; ";
+    }
+    else
+    {
+        cout << get<term_binary_node>(for_loop.comparison.binary_expr).lhs.value << " ?? " << get<term_binary_node>(for_loop.comparison.binary_expr).rhs.value << "; ";
+    }
+    print_assign(for_loop.assign);
+    cout << "DO {" << endl;
+    for (statement_node *stmt : for_loop.statements)
     {
         print_statement(*stmt);
     }

@@ -184,6 +184,16 @@ Token Lexer::next_token()
         this->read();
         return Token(OP_MOD, "", this->line_number);
     }
+    else if (this->current_char == ',')
+    {
+        this->read();
+        return Token(COMMA, "", this->line_number);
+    }
+    else if (this->current_char == ';')
+    {
+        this->read();
+        return Token(SEMICOLON, "", this->line_number);
+    }
     else if (this->current_char == '/')
     {
         this->read();

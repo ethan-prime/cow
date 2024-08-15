@@ -18,7 +18,7 @@ private:
     vector<variable> variables;
     vector<string> labels;
     unsigned int current_if_index;
-    unsigned int current_while_index;
+    unsigned int current_loop_index;
     unsigned int buffer_ptr; // 24 bytes buffer to flush text to console
     ofstream file;
 
@@ -44,6 +44,7 @@ public:
     identifier_type term_to_asm(term_node term, identifier_type expect = TYPE_INT);
     void input_to_asm(term_node term);
     void while_loop_to_asm(while_loop_node while_loop);
+    void for_loop_to_asm(for_loop_node for_loop);
     void declaration_to_asm(declaration_node decl);
 
     // HELPERS
@@ -53,9 +54,11 @@ public:
     void collect_variables(vector<statement_node> stmts);
     void collect_labels();
     void collect_all_while_loops();
+    void collect_all_for_loops();
     void collect_all_if_thens();
     void collect_if_then(if_then_node if_then);
     void collect_while_loops(while_loop_node while_loop);
+    void collect_for_loops(for_loop_node for_loop);
 
     void update_buffer_ptr();
 

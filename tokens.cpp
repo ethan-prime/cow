@@ -79,6 +79,10 @@ string Token::repr()
         return "op_right_shift";
     case FOR:
         return "for";
+    case COMMA:
+        return "comma";
+    case SEMICOLON:
+        return "semicolon";
     default:
         return "moo! something went wrong when tokenizing...";
     }

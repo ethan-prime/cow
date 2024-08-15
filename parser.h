@@ -16,6 +16,7 @@ enum statement_type
     STMT_PRINT, // make this a function in later versions?
     STMT_LABEL,
     STMT_WHILE_LOOP,
+    STMT_FOR_LOOP,
     STMT_BREAK,
     STMT_DECLARATION
 };
@@ -122,10 +123,18 @@ struct while_loop_node
     vector<statement_node *> statements;
 };
 
+struct for_loop_node
+{
+    declaration_node declaration;
+    comparison_node comparison;
+    assign_node assign;
+    vector<statement_node *> statements;
+};
+
 struct statement_node
 {
     statement_type kind;
-    variant<assign_node, if_then_node, goto_node, print_node, label_node, while_loop_node, declaration_node> statement;
+    variant<assign_node, if_then_node, goto_node, print_node, label_node, while_loop_node, for_loop_node, declaration_node> statement;
 };
 
 struct program_node
@@ -165,6 +174,7 @@ public:
     statement_node parse_print();
     statement_node parse_label();
     statement_node parse_while_loop();
+    statement_node parse_for_loop();
     statement_node parse_declaration();
 
     expr_node parse_expr();
@@ -184,3 +194,4 @@ void print_if_then(if_then_node if_then);
 void print_print(print_node print);
 void print_label(label_node label);
 void print_while_loop(while_loop_node while_loop);
+void print_for_loop(for_loop_node for_loop);
