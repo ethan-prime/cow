@@ -284,8 +284,8 @@ void Generator::array_assign_to_asm(assign_node assign)
         exit(0);
     }
 
-    // get ptr of array into %rcx. %rax or %xmm0 holds our value we want to store.
-    file << "   movq -" << index * 8 + 8 << "(%rbp), %rcx" << endl;
+    // get ptr of array into %rdx. %rax or %xmm0 holds our value we want to store.
+    file << "   movq -" << index * 8 + 8 << "(%rbp), %rdx" << endl;
 
     // if we have an identifier as the array index, lets get it into %rbx.
     if (!isdigit(array_idx[0]))
@@ -308,11 +308,11 @@ void Generator::array_assign_to_asm(assign_node assign)
 
     if (array_type == TYPE_ARRAY_INT)
     {
-        file << "   movq %rax, (%rcx, %rbx, 8)" << endl;
+        file << "   movq %rax, (%rdx, %rbx, 8)" << endl;
     }
     else if (array_type == TYPE_ARRAY_REAL)
     {
-        file << "   movsd %xmm0, (%rcx, %rbx, 8)" << endl;
+        file << "   movsd %xmm0, (%rdx, %rbx, 8)" << endl;
     }
 }
 
@@ -1059,8 +1059,8 @@ identifier_type Generator::term_to_asm(term_node term, identifier_type expected)
         string array_idx = term.value.substr(pos + 1);
         unsigned int index = this->variable_index(identifier);
 
-        // store ptr to arr in %rcx.
-        file << "   movq -" << index * 8 + 8 << "(%rbp)" << ", %rcx" << endl;
+        // store ptr to arr in %rdx.
+        file << "   movq -" << index * 8 + 8 << "(%rbp)" << ", %rdx" << endl;
 
         // if we have an identifier as the array index, lets get it into %rbx.
         if (!isdigit(array_idx[0]))
@@ -1084,7 +1084,7 @@ identifier_type Generator::term_to_asm(term_node term, identifier_type expected)
         if (this->get_type(identifier) == TYPE_ARRAY_INT)
         {
             // index into array, move into rax.
-            file << "   movq (%rcx, %rbx, 8), %rax" << endl;
+            file << "   movq (%rdx, %rbx, 8), %rax" << endl;
             if (expected == TYPE_REAL) // convert to real and store in xmm0 if expected is a real.
                 file << "   cvtsi2sd %rax, %xmm0" << endl;
             return TYPE_INT;
@@ -1092,7 +1092,7 @@ identifier_type Generator::term_to_asm(term_node term, identifier_type expected)
         else if (this->get_type(identifier) == TYPE_ARRAY_REAL)
         {
             // index into array, move into xmm0.
-            file << "   movsd (%rcx, %rbx, 8), %xmm0" << endl;
+            file << "   movsd (%rdx, %rbx, 8), %xmm0" << endl;
             return TYPE_REAL;
         }
     }
