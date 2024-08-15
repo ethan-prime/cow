@@ -40,7 +40,7 @@ while num != 0 do {
 fib.milk: computes the first n fibonacci numbers
 ```
 
-```
+```c
 int! len = input
 
 int... fib[len]
