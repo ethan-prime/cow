@@ -361,9 +361,25 @@ void Generator::declaration_to_asm(declaration_node decl)
     }
     else if (decl.type == TYPE_ARRAY_INT || decl.type == TYPE_ARRAY_REAL)
     {
-        file << "   movq $" << get<term_node>(decl.expr.expr).value << ", %rdi" << endl;
+        if (!isdigit(get<term_node>(decl.expr.expr).value[0]))
+        {
+            if (!this->is_defined(get<term_node>(decl.expr.expr).value))
+            {
+                cout << "[leather] compilation error:" << endl
+                     << "    variable \"" << get<term_node>(decl.expr.expr).value << "\" is not declared." << endl;
+                exit(0);
+                // sem error! :(
+            }
+            unsigned int index = this->variable_index(get<term_node>(decl.expr.expr).value);
+            file << "   movq -" << index * 8 + 8 << "(%rbp)" << ", %rdi" << endl;
+        }
+        else
+        {
+            file << "   movq $" << get<term_node>(decl.expr.expr).value << ", %rdi" << endl;
+        }
+        file << "   xor %r12, %r12" << endl;
         // do len * 8 to find how many bytes we need to allocate
-        file << "   lea -" << get<term_node>(decl.expr.expr).value << "(%rdi, %rdi, 8), %rdi" << endl;
+        file << "   lea (%r12, %rdi, 8), %rdi" << endl;
         file << "   call heapalloc" << endl;
         file << "   movq %rax, -" << index * 8 + 8 << "(%rbp)" << endl;
     }

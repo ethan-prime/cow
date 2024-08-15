@@ -715,7 +715,7 @@ statement_node Parser::parse_declaration()
         {
             error("{");
         }
-        if (this->current_token().kind == INT_LITERAL)
+        if (this->current_token().kind == INT_LITERAL || this->current_token().kind == IDENTIFIER)
         {
             get<term_node>(decl.expr.expr).value = this->current_token().value;
             this->advance();

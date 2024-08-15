@@ -34,6 +34,31 @@ while num != 0 do {
     num = input
 }
 ```
+
+```
+*more recent example (vector, for loops, etc)*
+fib.milk: computes the first n fibonacci numbers
+```
+
+```
+int! len = input
+
+int... fib[len]
+
+fib[0] = 1
+fib[1] = 1
+
+for int! i = 2; i < len; i = i + 1 do {
+    int! idx_back = i - 1
+    int! idx_back_2 = i - 2
+    fib[i] = fib[idx_back] + fib[idx_back_2]
+}
+
+for int! j = 0; j < len; j = j + 1 do {
+    moo fib[j]
+}
+```
+
 ```
 $ ./leather sqrt_newtons_method.milk
 [leather] successfully compiled:
