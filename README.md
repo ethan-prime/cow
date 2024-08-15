@@ -5,56 +5,22 @@
 
 # Example: 
 ```
-sqrt_newtons_method.milk
-```
-Uses Newton's Method to continuously calculate the square root of a number to 10 decimal points until the user enters 0, based on this equation:
-
-```math
-$$x_{n+1} = \frac{1}{2}\left(x _{n} + \frac{a}{x_{n}} \right)$$
-```
-<br/>
-
-```c
-int! num = input
-
-while num != 0 do {
-
-    real! cur_guess = 1.0
-    real! next_guess
-
-    for int! i = 0; i < 20; i = i + 1 do {
-        real! add_part = num / cur_guess
-        next_guess = cur_guess + add_part
-        next_guess = next_guess / 2
-        cur_guess = next_guess
-    }
-
-    moo cur_guess
-    
-    num = input
-}
-```
-
-```
-*more recent example (vector, for loops, etc)*
 fib.milk: computes the first n fibonacci numbers
 ```
 
 ```c
-int! len = input
+int! n = input
 
-int... fib[len]
+int... fib[n]
 
 fib[0] = 1
 fib[1] = 1
 
-for int! i = 2; i < len; i = i + 1 do {
-    int! idx_back = i - 1
-    int! idx_back_2 = i - 2
-    fib[i] = fib[idx_back] + fib[idx_back_2]
+for int! i = 2; i < n; i = i + 1 do {
+    fib[i] = fib[i - 1] + fib[i - 2]
 }
 
-for int! j = 0; j < len; j = j + 1 do {
+for int! j = 0; j < n; j = j + 1 do {
     moo fib[j]
 }
 ```
@@ -70,10 +36,10 @@ $ ./leather sqrt_newtons_method.milk
 .globl _start
 _start:
    mov %rsp, %rbp
-   sub $40, %rsp
-   sub $64, %rsp
+   sub $48, %rsp
+   sub $128, %rsp
    mov %rbp, %rsi
-   addq $40, %rsi
+   addq $48, %rsi
    movq $0, %rax
    movq $0, %rdi
    movq $64, %rdx
@@ -87,91 +53,100 @@ _start:
    xor %r8, %r8
    call ascii_to_int
    movq %rax, -8(%rbp)
+   movq -8(%rbp), %rdi
+   xor %r12, %r12
+   lea (%r12, %rdi, 8), %rdi
+   call heapalloc
+   movq %rax, -16(%rbp)
+   movq $1, %rax
+   movq -16(%rbp), %rdx
+   movq $0, %rbx
+   movq %rax, (%rdx, %rbx, 8)
+   movq $1, %rax
+   movq -16(%rbp), %rdx
+   movq $1, %rbx
+   movq %rax, (%rdx, %rbx, 8)
+   movq $2, %rax
+   movq %rax, -24(%rbp)
 .STARTLOOP0:
-   movq -8(%rbp), %rax
+   movq -24(%rbp), %rax
    mov %rax, %rcx
-   movq $0, %rax
-   cmpq %rcx, %rax
-   setne %al
+   movq -8(%rbp), %rax
+   cmpq %rax, %rcx
+   setl %al
    movzbq %al, %rax
    test %rax, %rax
    jz .ENDLOOP0
-   movabs $0x3FF0000000000000, %rax
-   movq %rax, %xmm0
-   movsd %xmm0, -16(%rbp)
-   movabs $0x0, %rax
-   movq %rax, %xmm0
-   movsd %xmm0, -24(%rbp)
-   movq $0, %rax
-   movq %rax, -32(%rbp)
-.STARTLOOP1:
-   movq -32(%rbp), %rax
+   movq $1, %rax
    mov %rax, %rcx
-   movq $20, %rax
+   movq -24(%rbp), %rax
+   subq %rcx, %rax
+   movq %rax, -32(%rbp)
+   movq $2, %rax
+   mov %rax, %rcx
+   movq -24(%rbp), %rax
+   subq %rcx, %rax
+   movq %rax, -40(%rbp)
+   movq -16(%rbp), %rdx
+   movq -32(%rbp), %rbx
+   movq (%rdx, %rbx, 8), %rax
+   mov %rax, %rcx
+   movq -16(%rbp), %rdx
+   movq -40(%rbp), %rbx
+   movq (%rdx, %rbx, 8), %rax
+   addq %rcx, %rax
+   movq -16(%rbp), %rdx
+   movq -24(%rbp), %rbx
+   movq %rax, (%rdx, %rbx, 8)
+   movq -24(%rbp), %rax
+   mov %rax, %rcx
+   movq $1, %rax
+   addq %rcx, %rax
+   movq %rax, -24(%rbp)
+   jmp .STARTLOOP0
+.ENDLOOP0:
+   movq $0, %rax
+   movq %rax, -48(%rbp)
+.STARTLOOP1:
+   movq -48(%rbp), %rax
+   mov %rax, %rcx
+   movq -8(%rbp), %rax
    cmpq %rax, %rcx
    setl %al
    movzbq %al, %rax
    test %rax, %rax
    jz .ENDLOOP1
-   movsd -16(%rbp), %xmm0
-   movsd %xmm0, %xmm1
-   movq -8(%rbp), %rax
-   cvtsi2sd %rax, %xmm0
-   divsd %xmm1, %xmm0
-   movsd %xmm0, -40(%rbp)
-   movsd -16(%rbp), %xmm0
-   movsd %xmm0, %xmm1
-   movsd -40(%rbp), %xmm0
-   addsd %xmm1, %xmm0
-   movsd %xmm0, -24(%rbp)
-   movq $2, %rax
-   cvtsi2sd %rax, %xmm0
-   movsd %xmm0, %xmm1
-   movsd -24(%rbp), %xmm0
-   divsd %xmm1, %xmm0
-   movsd %xmm0, -24(%rbp)
-   movsd -24(%rbp), %xmm0
-   movsd %xmm0, -16(%rbp)
-   movq -32(%rbp), %rax
-   mov %rax, %rcx
-   movq $1, %rax
-   addq %rcx, %rax
-   movq %rax, -32(%rbp)
-   jmp .STARTLOOP1
-.ENDLOOP1:
-   movsd -16(%rbp), %xmm0
+   movq -16(%rbp), %rdx
+   movq -48(%rbp), %rbx
+   movq (%rdx, %rbx, 8), %rax
    movq $1, %rsi
    mov %rbp, %rcx
-   addq $103, %rcx
+   addq $111, %rcx
    movq $0x0A, (%rcx)
    dec %rcx
-   call double_to_ascii
+   call int_to_ascii
    movq $1, %rax
    movq $1, %rdi
    syscall
-   mov %rbp, %rsi
-   addq $40, %rsi
-   movq $0, %rax
-   movq $0, %rdi
-   movq $64, %rdx
-   syscall
+   movq -48(%rbp), %rax
    mov %rax, %rcx
-   subq $1, %rcx
-   mov %rsi, %r9
-   addq %rcx, %r9
-   subq $1, %r9
-   movq $1, %rbx
-   xor %r8, %r8
-   call ascii_to_int
-   movq %rax, -8(%rbp)
-   jmp .STARTLOOP0
-.ENDLOOP0:
+   movq $1, %rax
+   addq %rcx, %rax
+   movq %rax, -48(%rbp)
+   jmp .STARTLOOP1
+.ENDLOOP1:
 .exit:
    movq $60, %rax
    xor %rdi, %rdi
    syscall
 
 int_to_ascii:
+   xor %r10, %r10
+   test %rax, %rax
+   jns .convert_positive
+   movq $1, %r10
+   neg %rax
+.convert_positive:
    movq $10, %rbx
    xor %rdx, %rdx
    div %rbx
@@ -180,7 +155,13 @@ int_to_ascii:
    inc %rsi
    dec %rcx
    test %rax, %rax
-   jnz int_to_ascii
+   jnz .convert_positive
+   test %r10, %r10
+   jz .end_itoa
+   movb $'-', (%rcx)
+   dec %rcx
+   inc %rsi
+.end_itoa:
    inc %rcx
    mov %rsi, %rdx
    mov %rcx, %rsi
@@ -214,8 +195,16 @@ exp:
    ret
 
 double_to_ascii:
-   movsd %xmm0, %xmm1
-   cvttsd2si %xmm1, %r9
+   xor %r12, %r12
+   cvttsd2si %xmm0, %r9
+   test %r9, %r9
+   jns .convert_positive_dta
+   movq $1, %r12
+   movabs $0x8000000000000000, %rax
+   movq %rax, %xmm2
+   xorpd %xmm2, %xmm0
+   cvttsd2si %xmm0, %r9
+.convert_positive_dta:
    movq $10000000000, %rax
    cvtsi2sd %rax, %xmm1
    mulsd %xmm1, %xmm0
@@ -244,31 +233,54 @@ double_to_ascii:
    dec %rcx
    mov %r9, %rax
    call int_to_ascii
+   test %r12, %r12
+   jz .end_dtoa
+   dec %rsi
+   movb $'-', (%rsi)
+   inc %rdx
+.end_dtoa:
+   ret
+
+heapalloc:
+   mov %rdi, %rsi
+   movq $0, %rdi
+   movq $0x3, %rdx
+   movq $0x22, %r10
+   movq $-1, %r8
+   xor %r9, %r9
+   movq $9, %rax
+   syscall
    ret
 
 ```
 
 ```
-$ gcc -c -g sqrt_newtons_method.s -o sqrt_newtons_method.o
-$ ld sqrt_newtons_method.o -o sqrt_newtons_method
-$ ./sqrt_newtons_method
+$ gcc -c -g fib.s -o fib.o
+$ ld fib.o -o fib
+$ ./fib
 ```
 
 ```
 stdout:
-100
-10.0
-64
-8.0
-279
-16.7032930884
-1000
-31.6227766016
-420
-20.4939015319
-2024
-44.9888875168
-2025
-45.0
-0
+20
+1
+1
+2
+3
+5
+8
+13
+21
+34
+55
+89
+144
+233
+377
+610
+987
+1597
+2584
+4181
+6765
 ```

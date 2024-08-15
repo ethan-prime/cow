@@ -243,6 +243,7 @@ statement_node Parser::parse_assignment()
     statement_node stmt;
     string identifier;
     expr_node expr;
+    expr_node index_expr;
 
     if (this->current_token().kind == IDENTIFIER)
     {
@@ -252,21 +253,12 @@ statement_node Parser::parse_assignment()
             // we are now parsing an array access
             this->advance();
             this->advance();
-            if (this->current_token().kind == INT_LITERAL || this->current_token().kind == IDENTIFIER)
-            {
-                identifier.push_back(':');
-                identifier.append(this->current_token().value);
-                stmt.kind = STMT_ARRAY_ASSIGN;
-                this->advance();
-            }
-            else
-            {
-                error("an array index");
-            }
+            index_expr = this->parse_expr();
             if (!(this->current_token().kind == CLOSE_BRACE))
             {
-                error("}");
+                error("]");
             }
+            stmt.kind = STMT_ARRAY_ASSIGN;
         }
         else
         {
@@ -287,8 +279,19 @@ statement_node Parser::parse_assignment()
     {
         error("=");
     }
-    expr = this->parse_expr();
-    stmt.statement = assign_node{identifier, expr};
+    if (stmt.kind == STMT_ARRAY_ASSIGN)
+    {
+        array_assign_node array_assign;
+        array_assign.identifier = identifier;
+        array_assign.index_expr = index_expr;
+        array_assign.expr = this->parse_expr();
+        stmt.statement = array_assign;
+    }
+    else
+    {
+        expr = this->parse_expr();
+        stmt.statement = assign_node{identifier, expr};
+    }
     return stmt;
 };
 
@@ -392,10 +395,8 @@ term_node Parser::parse_term()
             this->advance();
             if (this->current_token().kind == INT_LITERAL || this->current_token().kind == IDENTIFIER)
             {
-                term.value.push_back(':');
-                term.value.append(this->current_token().value);
                 term.kind = TERM_ARRAY_ACCESS;
-                this->advance();
+                term.index_expr = new expr_node(this->parse_expr());
             }
             else
             {
@@ -583,6 +584,8 @@ statement_node Parser::parse_declaration()
 {
     statement_node stmt;
     declaration_node decl;
+    expr_node expr;
+    string identifier;
     if (this->current_token().kind == KEYW_INT)
     {
         decl.type = TYPE_INT;
@@ -638,6 +641,7 @@ statement_node Parser::parse_declaration()
     }
     if (this->current_token().kind == IDENTIFIER)
     {
+        identifier = this->current_token().value;
         decl.identifier = this->current_token().value;
         this->advance();
     }
@@ -710,23 +714,22 @@ statement_node Parser::parse_declaration()
         if (this->current_token().kind == OPEN_BRACE)
         {
             this->advance();
+            expr = this->parse_expr();
         }
         else
         {
             error("{");
         }
-        if (this->current_token().kind == INT_LITERAL || this->current_token().kind == IDENTIFIER)
-        {
-            get<term_node>(decl.expr.expr).value = this->current_token().value;
-            this->advance();
-        }
-        else
-        {
-            error("length of an array");
-        }
         if (this->current_token().kind == CLOSE_BRACE)
         {
             this->advance();
+            stmt.kind = STMT_ARRAY_DECLARATION;
+            array_declare_node declaration;
+            declaration.identifier = identifier;
+            declaration.len_expr = expr;
+            declaration.type = decl.type;
+            stmt.statement = declaration;
+            return stmt;
         }
         else
         {
@@ -742,8 +745,10 @@ statement_node Parser::parse_declaration()
 // prints AST of program
 void print_program(program_node program)
 {
+    cout << "PARSED PROGRAM: " << endl;
     for (statement_node stmt : program.statements)
     {
+        cout << "   ";
         print_statement(stmt);
     }
 };
@@ -751,6 +756,17 @@ void print_program(program_node program)
 void print_assign(assign_node assign)
 {
     cout << "ASSIGN " << assign.identifier << " to ";
+
+    print_expr(assign.expr);
+
+    cout << endl;
+};
+
+void print_array_assign(array_assign_node assign)
+{
+    cout << "ASSIGN " << assign.identifier << "[";
+    print_expr(assign.index_expr);
+    cout << "] to ";
 
     print_expr(assign.expr);
 
@@ -771,12 +787,6 @@ void print_declaration(declaration_node decl)
     case TYPE_REAL:
         cout << "(real) ";
         break;
-    case TYPE_ARRAY_INT:
-        cout << "(array<int>) len ";
-        break;
-    case TYPE_ARRAY_REAL:
-        cout << "(array<real>) len ";
-        break;
     default:
         cout << "(type?) ";
     }
@@ -785,11 +795,48 @@ void print_declaration(declaration_node decl)
     cout << endl;
 }
 
+void print_array_declare(array_declare_node decl)
+{
+    cout << "DECLARE ARRAY";
+    switch (decl.type)
+    {
+    case TYPE_ARRAY_INT:
+        cout << "<int> ";
+        break;
+    case TYPE_ARRAY_REAL:
+        cout << "<real> ";
+        break;
+    default:
+        cout << "<type unknown> ";
+    }
+    cout << decl.identifier << " with length ";
+    print_expr(decl.len_expr);
+    cout << endl;
+}
+
+void print_term(term_node term)
+{
+    if (term.kind == TERM_ARRAY_ACCESS)
+    {
+        cout << term.value << "[";
+        print_expr(*term.index_expr);
+        cout << "]";
+    }
+    else if (term.kind == TERM_INPUT)
+    {
+        cout << "INPUT";
+    }
+    else
+    {
+        cout << term.value;
+    }
+}
+
 void print_expr(expr_node expr)
 {
     if (expr.kind == UNARY_EXPR)
     {
-        cout << (!get<term_node>(expr.expr).value.empty() ? get<term_node>(expr.expr).value : "INPUT");
+        print_term(get<term_node>(expr.expr));
     }
     else if (expr.kind == BINARY_EXPR_PLUS)
     {
@@ -797,7 +844,9 @@ void print_expr(expr_node expr)
         lhs = get<term_binary_node>(expr.expr).lhs;
         rhs = get<term_binary_node>(expr.expr).rhs;
 
-        cout << (!lhs.value.empty() ? lhs.value : "INPUT") << " + " << (!rhs.value.empty() ? rhs.value : "INPUT");
+        print_term(lhs);
+        cout << " + ";
+        print_term(rhs);
     }
     else if (expr.kind == BINARY_EXPR_MINUS)
     {
@@ -805,7 +854,9 @@ void print_expr(expr_node expr)
         lhs = get<term_binary_node>(expr.expr).lhs;
         rhs = get<term_binary_node>(expr.expr).rhs;
 
-        cout << (!lhs.value.empty() ? lhs.value : "INPUT") << " - " << (!rhs.value.empty() ? rhs.value : "INPUT");
+        print_term(lhs);
+        cout << " - ";
+        print_term(rhs);
     }
     else if (expr.kind == BINARY_EXPR_MULT)
     {
@@ -813,7 +864,9 @@ void print_expr(expr_node expr)
         lhs = get<term_binary_node>(expr.expr).lhs;
         rhs = get<term_binary_node>(expr.expr).rhs;
 
-        cout << (!lhs.value.empty() ? lhs.value : "INPUT") << " * " << (!rhs.value.empty() ? rhs.value : "INPUT");
+        print_term(lhs);
+        cout << " * ";
+        print_term(rhs);
     }
     else if (expr.kind == BINARY_EXPR_DIV)
     {
@@ -821,7 +874,9 @@ void print_expr(expr_node expr)
         lhs = get<term_binary_node>(expr.expr).lhs;
         rhs = get<term_binary_node>(expr.expr).rhs;
 
-        cout << (!lhs.value.empty() ? lhs.value : "INPUT") << " / " << (!rhs.value.empty() ? rhs.value : "INPUT");
+        print_term(lhs);
+        cout << " / ";
+        print_term(rhs);
     }
     else if (expr.kind == BINARY_EXPR_MOD)
     {
@@ -829,7 +884,9 @@ void print_expr(expr_node expr)
         lhs = get<term_binary_node>(expr.expr).lhs;
         rhs = get<term_binary_node>(expr.expr).rhs;
 
-        cout << (!lhs.value.empty() ? lhs.value : "INPUT") << " % " << (!rhs.value.empty() ? rhs.value : "INPUT");
+        print_term(lhs);
+        cout << " % ";
+        print_term(rhs);
     }
     else if (expr.kind == BINARY_EXPR_EXP)
     {
@@ -837,7 +894,9 @@ void print_expr(expr_node expr)
         lhs = get<term_binary_node>(expr.expr).lhs;
         rhs = get<term_binary_node>(expr.expr).rhs;
 
-        cout << (!lhs.value.empty() ? lhs.value : "INPUT") << " ** " << (!rhs.value.empty() ? rhs.value : "INPUT");
+        print_term(lhs);
+        cout << " ** ";
+        print_term(rhs);
     }
     else if (expr.kind == BINARY_EXPR_RIGHT_SHIFT)
     {
@@ -845,7 +904,9 @@ void print_expr(expr_node expr)
         lhs = get<term_binary_node>(expr.expr).lhs;
         rhs = get<term_binary_node>(expr.expr).rhs;
 
-        cout << (!lhs.value.empty() ? lhs.value : "INPUT") << " >> " << (!rhs.value.empty() ? rhs.value : "INPUT");
+        print_term(lhs);
+        cout << " >> ";
+        print_term(rhs);
     }
     else
     {
@@ -861,20 +922,8 @@ void print_goto(goto_node goto_)
 void print_print(print_node print)
 {
     cout << "PRINT ";
-    switch (print.term.kind)
-    {
-    case TERM_INPUT:
-        cout << "INPUT" << endl;
-        break;
-    case TERM_IDENTIFIER:
-        cout << print.term.value << endl;
-        break;
-    case TERM_INT_LITERAL:
-        cout << print.term.value << endl;
-        break;
-    default:
-        break;
-    }
+    print_term(print.term);
+    cout << endl;
 };
 
 void print_statement(statement_node stmt)
@@ -885,8 +934,7 @@ void print_statement(statement_node stmt)
         print_assign(get<assign_node>(stmt.statement));
         break;
     case STMT_ARRAY_ASSIGN:
-        cout << "(array) ";
-        print_assign(get<assign_node>(stmt.statement));
+        print_array_assign(get<array_assign_node>(stmt.statement));
         break;
     case STMT_GOTO:
         print_goto(get<goto_node>(stmt.statement));
@@ -908,6 +956,9 @@ void print_statement(statement_node stmt)
         break;
     case STMT_DECLARATION:
         print_declaration(get<declaration_node>(stmt.statement));
+        break;
+    case STMT_ARRAY_DECLARATION:
+        print_array_declare(get<array_declare_node>(stmt.statement));
         break;
     case STMT_BREAK:
         cout << "BREAK" << endl;
@@ -942,40 +993,48 @@ void print_if_then(if_then_node if_then)
     }
     for (statement_node *stmt : if_then.statements)
     {
+        cout << "       ";
         print_statement(*stmt);
     }
-    cout << "}" << endl;
+    cout << "   }" << endl;
 };
 
 void print_while_loop(while_loop_node while_loop)
 {
     if (while_loop.comparison.kind == COMP_LESS_THAN)
     {
-        cout << "WHILE " << get<term_binary_node>(while_loop.comparison.binary_expr).lhs.value << " < " << get<term_binary_node>(while_loop.comparison.binary_expr).rhs.value << " DO" << " {" << endl;
+        cout << "WHILE " << get<term_binary_node>(while_loop.comparison.binary_expr).lhs.value << " < " << get<term_binary_node>(while_loop.comparison.binary_expr).rhs.value << endl
+             << "   DO " << " {" << endl;
     }
     else if (while_loop.comparison.kind == COMP_GREATER_THAN)
     {
-        cout << "WHILE " << get<term_binary_node>(while_loop.comparison.binary_expr).lhs.value << " > " << get<term_binary_node>(while_loop.comparison.binary_expr).rhs.value << " DO" << " {" << endl;
+        cout << "WHILE " << get<term_binary_node>(while_loop.comparison.binary_expr).lhs.value << " > " << get<term_binary_node>(while_loop.comparison.binary_expr).rhs.value << endl
+             << "   DO " << " {" << endl;
     }
     else if (while_loop.comparison.kind == COMP_EQUAL)
     {
-        cout << "WHILE " << get<term_binary_node>(while_loop.comparison.binary_expr).lhs.value << " == " << get<term_binary_node>(while_loop.comparison.binary_expr).rhs.value << " DO" << " {" << endl;
+        cout << "WHILE " << get<term_binary_node>(while_loop.comparison.binary_expr).lhs.value << " == " << get<term_binary_node>(while_loop.comparison.binary_expr).rhs.value << endl
+             << "   DO " << " {" << endl;
     }
     else
     {
-        cout << "WHILE " << get<term_binary_node>(while_loop.comparison.binary_expr).lhs.value << " ?? " << get<term_binary_node>(while_loop.comparison.binary_expr).rhs.value << " DO" << " {" << endl;
+        cout << "WHILE " << get<term_binary_node>(while_loop.comparison.binary_expr).lhs.value << " ?? " << get<term_binary_node>(while_loop.comparison.binary_expr).rhs.value << endl
+             << "   DO " << " {" << endl;
     }
     for (statement_node *stmt : while_loop.statements)
     {
+        cout << "      ";
         print_statement(*stmt);
     }
-    cout << "}" << endl;
+    cout << "   }" << endl;
 }
 
 void print_for_loop(for_loop_node for_loop)
 {
-    cout << "FOR ";
+    cout << "FOR " << endl;
+    cout << "      ";
     print_declaration(for_loop.declaration);
+    cout << "      ";
     if (for_loop.comparison.kind == COMP_LESS_THAN)
     {
         cout << get<term_binary_node>(for_loop.comparison.binary_expr).lhs.value << " < " << get<term_binary_node>(for_loop.comparison.binary_expr).rhs.value << "; ";
@@ -993,10 +1052,11 @@ void print_for_loop(for_loop_node for_loop)
         cout << get<term_binary_node>(for_loop.comparison.binary_expr).lhs.value << " ?? " << get<term_binary_node>(for_loop.comparison.binary_expr).rhs.value << "; ";
     }
     print_assign(for_loop.assign);
-    cout << "DO {" << endl;
+    cout << "   DO {" << endl;
     for (statement_node *stmt : for_loop.statements)
     {
+        cout << "      ";
         print_statement(*stmt);
     }
-    cout << "}" << endl;
+    cout << "   }" << endl;
 }
