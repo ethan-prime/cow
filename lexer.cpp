@@ -157,7 +157,35 @@ Token Lexer::next_token()
     else if (this->current_char == '-')
     {
         this->read();
-        return Token(OP_MINUS, "", this->line_number);
+        string buf = "-";
+        int is_real = 0;
+        // collect int
+        while (isdigit(this->current_char) || this->current_char == '.')
+        {
+            if (this->current_char == '.')
+            {
+                is_real++;
+            }
+            if (is_real > 1)
+            {
+                return Token(REAL_LITERAL, buf, this->line_number);
+            }
+            buf.push_back(this->current_char);
+            this->read();
+        }
+
+        if (is_real)
+        {
+            return Token(REAL_LITERAL, buf, this->line_number);
+        }
+        else if (buf.size() == 1)
+        {
+            return Token(OP_MINUS, "", this->line_number);
+        }
+        else
+        {
+            return Token(INT_LITERAL, buf, this->line_number);
+        }
     }
     else if (this->current_char == '*')
     {

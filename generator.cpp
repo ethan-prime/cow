@@ -42,7 +42,7 @@ void Generator::to_asm()
     this->update_buffer_ptr();
 
     // allocate memory for buffer for inputs and printing to the screen
-    file << "   sub $64, %rsp" << endl;
+    file << "   sub $128, %rsp" << endl;
     for (statement_node stmt : this->program.statements)
     {
         this->statement_to_asm(stmt);
@@ -55,6 +55,12 @@ void Generator::to_asm()
     // predefined functions
     file << endl;
     file << "int_to_ascii:" << endl;
+    file << "   xor %r10, %r10" << endl;
+    file << "   test %rax, %rax" << endl;
+    file << "   jns .convert_positive" << endl;
+    file << "   movq $1, %r10" << endl;
+    file << "   neg %rax" << endl;
+    file << ".convert_positive:" << endl;
     file << "   movq $10, %rbx" << endl;
     file << "   xor %rdx, %rdx" << endl;
     file << "   div %rbx" << endl;
@@ -63,7 +69,13 @@ void Generator::to_asm()
     file << "   inc %rsi" << endl;
     file << "   dec %rcx" << endl;
     file << "   test %rax, %rax" << endl;
-    file << "   jnz int_to_ascii" << endl;
+    file << "   jnz .convert_positive" << endl;
+    file << "   test %r10, %r10" << endl;
+    file << "   jz .end_itoa" << endl;
+    file << "   movb $'-', (%rcx)" << endl;
+    file << "   dec %rcx" << endl;
+    file << "   inc %rsi" << endl;
+    file << ".end_itoa:" << endl;
     file << "   inc %rcx" << endl;
     file << "   mov %rsi, %rdx" << endl;
     file << "   mov %rcx, %rsi" << endl;
@@ -100,8 +112,16 @@ void Generator::to_asm()
 
     file << endl;
     file << "double_to_ascii:" << endl;
-    file << "   movsd %xmm0, %xmm1" << endl;
-    file << "   cvttsd2si %xmm1, %r9" << endl;
+    file << "   xor %r12, %r12" << endl;
+    file << "   cvttsd2si %xmm0, %r9" << endl;
+    file << "   test %r9, %r9" << endl;
+    file << "   jns .convert_positive_dta" << endl;
+    file << "   movq $1, %r12" << endl;
+    file << "   movabs $0x8000000000000000, %rax" << endl;
+    file << "   movq %rax, %xmm2" << endl;
+    file << "   xorpd %xmm2, %xmm0" << endl;
+    file << "   cvttsd2si %xmm0, %r9" << endl;
+    file << ".convert_positive_dta:" << endl;
     file << "   movq $10000000000, %rax" << endl;
     file << "   cvtsi2sd %rax, %xmm1" << endl;
     file << "   mulsd %xmm1, %xmm0" << endl;
@@ -130,6 +150,12 @@ void Generator::to_asm()
     file << "   dec %rcx" << endl;
     file << "   mov %r9, %rax" << endl;
     file << "   call int_to_ascii" << endl;
+    file << "   test %r12, %r12" << endl;
+    file << "   jz .end_dtoa" << endl;
+    file << "   dec %rsi" << endl;
+    file << "   movb $'-', (%rsi)" << endl;
+    file << "   inc %rdx" << endl;
+    file << ".end_dtoa:" << endl;
     file << "   ret" << endl;
 
     file << endl;
@@ -1080,42 +1106,83 @@ identifier_type Generator::term_to_asm(term_node term, identifier_type expected)
 void Generator::comparison_to_asm(comparison_node comp)
 {
     // we need to store in %rax.
-    if (comp.kind == COMP_LESS_THAN || comp.kind == COMP_GREATER_THAN)
+    identifier_type expected = expected_binary_expr_result(get<term_binary_node>(comp.binary_expr));
+    if (expected == TYPE_INT)
     {
-        term_binary_node binary_expr = get<term_binary_node>(comp.binary_expr);
-        term_node lhs = binary_expr.lhs;
-        term_to_asm(lhs);
-        // lhs is in %rax -> store temp in %rcx.
-        file << "   mov %rax, %rcx" << endl;
-        term_node rhs = binary_expr.rhs;
-        term_to_asm(rhs);
-        // rhs is in %rax, so lets compare now.
-        file << "   cmpq %rax, %rcx" << endl;
-        // if res is less than 0, we know lhs < rhs,
-        // so put a 1 in %rax or else %rax should be 0.
-        if (comp.kind == COMP_LESS_THAN)
-            file << "   setl %al" << endl;
-        else if (comp.kind == COMP_GREATER_THAN)
-            file << "   setg %al" << endl;
-        // put it in %rax with zero extend
-        file << "   movzbq %al, %rax" << endl;
+        if (comp.kind == COMP_LESS_THAN || comp.kind == COMP_GREATER_THAN)
+        {
+            term_binary_node binary_expr = get<term_binary_node>(comp.binary_expr);
+            term_node lhs = binary_expr.lhs;
+            term_to_asm(lhs);
+            // lhs is in %rax -> store temp in %rcx.
+            file << "   mov %rax, %rcx" << endl;
+            term_node rhs = binary_expr.rhs;
+            term_to_asm(rhs);
+            // rhs is in %rax, so lets compare now.
+            file << "   cmpq %rax, %rcx" << endl;
+            // if res is less than 0, we know lhs < rhs,
+            // so put a 1 in %rax or else %rax should be 0.
+            if (comp.kind == COMP_LESS_THAN)
+                file << "   setl %al" << endl;
+            else if (comp.kind == COMP_GREATER_THAN)
+                file << "   setg %al" << endl;
+            // put it in %rax with zero extend
+            file << "   movzbq %al, %rax" << endl;
+        }
+        else if (comp.kind == COMP_EQUAL || comp.kind == COMP_NOT_EQUAL)
+        {
+            term_binary_node binary_expr = get<term_binary_node>(comp.binary_expr);
+            term_node lhs = binary_expr.lhs;
+            term_to_asm(lhs);
+            file << "   mov %rax, %rcx" << endl;
+            term_node rhs = binary_expr.rhs;
+            term_to_asm(rhs);
+            file << "   cmpq %rcx, %rax" << endl;
+            if (comp.kind == COMP_EQUAL)
+                file << "   sete %al" << endl;
+            else if (comp.kind == COMP_NOT_EQUAL)
+                file << "   setne %al" << endl;
+            file << "   movzbq %al, %rax" << endl;
+        }
     }
-    else if (comp.kind == COMP_EQUAL || comp.kind == COMP_NOT_EQUAL)
+    else if (expected == TYPE_REAL)
     {
-        term_binary_node binary_expr = get<term_binary_node>(comp.binary_expr);
-        term_node lhs = binary_expr.lhs;
-        term_to_asm(lhs);
-        file << "   mov %rax, %rcx" << endl;
-        term_node rhs = binary_expr.rhs;
-        term_to_asm(rhs);
-        file << "   cmpq %rcx, %rax" << endl;
-        if (comp.kind == COMP_EQUAL)
-            file << "   sete %al" << endl;
-        else if (comp.kind == COMP_NOT_EQUAL)
-            file << "   setne %al" << endl;
-        file << "   movzbq %al, %rax" << endl;
+        if (comp.kind == COMP_LESS_THAN || comp.kind == COMP_GREATER_THAN)
+        {
+            term_binary_node binary_expr = get<term_binary_node>(comp.binary_expr);
+            term_node lhs = binary_expr.lhs;
+            term_to_asm(lhs, expected = TYPE_REAL);
+            // lhs is in %xmm0 -> store temp in %xmm1.
+            file << "   movsd %xmm0, %xmm1" << endl;
+            term_node rhs = binary_expr.rhs;
+            term_to_asm(rhs, expected = TYPE_REAL);
+            // rhs is in %xmm1, so lets compare now.
+            file << "   ucomisd %xmm0, %xmm1" << endl;
+            // if res is less than 0, we know lhs < rhs,
+            // so put a 1 in %rax or else %rax should be 0.
+            if (comp.kind == COMP_LESS_THAN)
+                file << "   setb %al" << endl;
+            else if (comp.kind == COMP_GREATER_THAN)
+                file << "   seta %al" << endl;
+            // put it in %rax with zero extend
+            file << "   movzbq %al, %rax" << endl;
+        }
+        else if (comp.kind == COMP_EQUAL || comp.kind == COMP_NOT_EQUAL)
+        {
+            term_binary_node binary_expr = get<term_binary_node>(comp.binary_expr);
+            term_node lhs = binary_expr.lhs;
+            term_to_asm(lhs, expected = TYPE_REAL);
+            file << "   movsd %xmm0, %xmm1" << endl;
+            term_node rhs = binary_expr.rhs;
+            term_to_asm(rhs, expected = TYPE_REAL);
+            file << "   ucomisd %xmm0, %xmm1" << endl;
+            if (comp.kind == COMP_EQUAL)
+                file << "   sete %al" << endl;
+            else if (comp.kind == COMP_NOT_EQUAL)
+                file << "   setne %al" << endl;
+            file << "   movzbq %al, %rax" << endl;
+        }
     }
-    // now, there is either a 0 or 1 is %rax. lets just flip the last bit if is_not is true.
     if (comp.is_not)
     {
         file << "   xor $1, %rax" << endl;
