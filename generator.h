@@ -37,6 +37,7 @@ public:
     void label_to_asm(label_node label);
     void goto_to_asm(goto_node goto_);
     void assign_to_asm(assign_node assign);
+    void array_assign_to_asm(assign_node assign);
     void if_then_to_asm(if_then_node if_then);
     void print_to_asm(print_node print);
     identifier_type expr_to_asm(expr_node expr);

@@ -184,6 +184,11 @@ Token Lexer::next_token()
         this->read();
         return Token(OP_MOD, "", this->line_number);
     }
+    else if (this->current_char == '.')
+    {
+        this->read();
+        return Token(PERIOD, "", this->line_number);
+    }
     else if (this->current_char == ',')
     {
         this->read();
@@ -203,6 +208,16 @@ Token Lexer::next_token()
     {
         this->read();
         return Token(OPEN_BRACKET, "", this->line_number);
+    }
+    else if (this->current_char == '[')
+    {
+        this->read();
+        return Token(OPEN_BRACE, "", this->line_number);
+    }
+    else if (this->current_char == ']')
+    {
+        this->read();
+        return Token(CLOSE_BRACE, "", this->line_number);
     }
     else if (this->current_char == '}')
     {

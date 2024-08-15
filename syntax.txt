@@ -1,12 +1,14 @@
-<term> ::= <identifier> | <int_literal> | 'input' | <bool> | <real_literal>
+<term> ::= <identifier> | <int_literal> | 'input' | <bool> | <real_literal> | <array_access>
 <bool> ::= 'true' | 'false'
 <expr> ::= <term> | <term> <arithmetic_op> <term>
 <arithmetic_op> ::= '+' | '-' | '*' | '/' | '**' | '%' | '>>'
 <comparison> ::= <term> <comparison_op> <term>
 <comparison_op> ::= '<' | '>' | '=='
 <type> ::= 'int' | 'double' | 'bool'?
-<declaration> ::= <type> ['!'] <identifier> [= <expr>]
-<assignment> ::= <identifier> = <expr>
+<declaration> ::= <type> ['!'] <identifier> [= <expr>] | <array_declaration> 
+<array_declaration> ::= <type>... <identifier> '[' <int_literal> ']'
+<array_access> ::= <identifier> '[' <int_literal> | <identifier> ']'
+<assignment> ::= <identifier> '[' <int_literal> ']' = <expr>
 <if_then> ::= 'if' <comparison> 'then' '{' [<statement>]* '}'
 <while_loop> ::= 'while' <comparison> 'do' '{' [<statement>]* '}'
 <for_loop> ::= 'for' <declaration> ',' <comparison> ',' <assignment> 'do' '{' [<statement>]* '}' 

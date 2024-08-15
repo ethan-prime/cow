@@ -131,6 +131,18 @@ void Generator::to_asm()
     file << "   mov %r9, %rax" << endl;
     file << "   call int_to_ascii" << endl;
     file << "   ret" << endl;
+
+    file << endl;
+    file << "heapalloc:" << endl;
+    file << "   mov %rdi, %rsi" << endl;
+    file << "   movq $0, %rdi" << endl;
+    file << "   movq $0x3, %rdx" << endl;
+    file << "   movq $0x22, %r10" << endl;
+    file << "   movq $-1, %r8" << endl;
+    file << "   xor %r9, %r9" << endl;
+    file << "   movq $9, %rax" << endl;
+    file << "   syscall" << endl;
+    file << "   ret" << endl;
     file.close();
 }
 
@@ -141,6 +153,9 @@ void Generator::statement_to_asm(statement_node stmt)
     {
     case STMT_ASSIGN:
         assign_to_asm(get<assign_node>(stmt.statement));
+        break;
+    case STMT_ARRAY_ASSIGN:
+        array_assign_to_asm(get<assign_node>(stmt.statement));
         break;
     case STMT_GOTO:
         goto_to_asm(get<goto_node>(stmt.statement));
@@ -220,6 +235,61 @@ void Generator::assign_to_asm(assign_node assign)
     }
 }
 
+void Generator::array_assign_to_asm(assign_node assign)
+{
+    if (!this->expr_valid(assign.expr))
+    {
+        // sem error
+        exit(0);
+    }
+
+    size_t pos = assign.identifier.find(':');
+    string identifier = assign.identifier.substr(0, pos);
+    string array_idx = assign.identifier.substr(pos + 1);
+    unsigned int index = this->variable_index(identifier);
+
+    identifier_type array_type = this->get_type(identifier);
+    identifier_type expected = expr_to_asm(assign.expr);
+
+    if (!((array_type == TYPE_ARRAY_INT && expected == TYPE_INT) || (array_type == TYPE_ARRAY_REAL && expected == TYPE_REAL)))
+    {
+        cout << "[leather] compilation error:" << endl
+             << "    " << "type mistmatch between expected expression when assign array variable \'" << identifier << "\' at index " << array_idx << endl;
+        exit(0);
+    }
+
+    // get ptr of array into %rcx. %rax or %xmm0 holds our value we want to store.
+    file << "   movq -" << index * 8 + 8 << "(%rbp), %rcx" << endl;
+
+    // if we have an identifier as the array index, lets get it into %rbx.
+    if (!isdigit(array_idx[0]))
+    {
+        if (!this->is_defined(array_idx))
+        {
+            cout << "[leather] compilation error:" << endl
+                 << "    variable \"" << array_idx << "\" is not declared." << endl;
+            exit(0);
+            // sem error! :(
+        }
+        unsigned int index = this->variable_index(array_idx);
+        file << "   movq -" << index * 8 + 8 << "(%rbp)" << ", %rbx" << endl;
+    }
+    // if its just a number
+    else
+    {
+        file << "   movq $" << array_idx << ", %rbx" << endl;
+    }
+
+    if (array_type == TYPE_ARRAY_INT)
+    {
+        file << "   movq %rax, (%rcx, %rbx, 8)" << endl;
+    }
+    else if (array_type == TYPE_ARRAY_REAL)
+    {
+        file << "   movsd %xmm0, (%rcx, %rbx, 8)" << endl;
+    }
+}
+
 void Generator::if_then_to_asm(if_then_node if_then)
 {
     // we assume that the result file the comparison is in %rax.
@@ -251,7 +321,7 @@ void Generator::declaration_to_asm(declaration_node decl)
     if (decl.type != expected)
     {
         cout << "[leather] compilation error:" << endl
-             << "    " << "type mistmatch between expected expression when declaring variable \'" << decl.identifier << "\'" << endl;
+             << "    " << "type mismatch between expected expression when declaring variable \'" << decl.identifier << "\'" << endl;
         exit(0);
     }
 
@@ -262,6 +332,14 @@ void Generator::declaration_to_asm(declaration_node decl)
     else if (decl.type == TYPE_REAL)
     {
         file << "   movsd %xmm0, -" << index * 8 + 8 << "(%rbp)" << endl;
+    }
+    else if (decl.type == TYPE_ARRAY_INT || decl.type == TYPE_ARRAY_REAL)
+    {
+        file << "   movq $" << get<term_node>(decl.expr.expr).value << ", %rdi" << endl;
+        // do len * 8 to find how many bytes we need to allocate
+        file << "   lea -" << get<term_node>(decl.expr.expr).value << "(%rdi, %rdi, 8), %rdi" << endl;
+        file << "   call heapalloc" << endl;
+        file << "   movq %rax, -" << index * 8 + 8 << "(%rbp)" << endl;
     }
 }
 
@@ -274,6 +352,20 @@ bool Generator::statement_valid(statement_node stmt)
     case STMT_ASSIGN:
         return this->expr_valid(get<assign_node>(stmt.statement).expr) && is_defined(get<assign_node>(stmt.statement).identifier);
         break;
+    case STMT_ARRAY_ASSIGN:
+    {
+        if (!this->expr_valid(get<assign_node>(stmt.statement).expr))
+            return false;
+
+        size_t pos = get<assign_node>(stmt.statement).identifier.find(':');
+        string identifier = get<assign_node>(stmt.statement).identifier.substr(0, pos);
+        if (!is_defined(identifier))
+            return false;
+
+        return true;
+
+        break;
+    }
     case STMT_GOTO:
         return this->goto_valid(get<goto_node>(stmt.statement));
         return true;
@@ -372,6 +464,16 @@ bool Generator::term_valid(term_node term)
         return true;
     case TERM_IDENTIFIER:
         return this->is_defined(term.value);
+    case TERM_ARRAY_REAL_LITERAL:
+        return true;
+    case TERM_ARRAY_INT_LITERAL:
+        return true;
+    case TERM_ARRAY_ACCESS:
+    {
+        size_t pos = term.value.find(':');
+        string identifier = term.value.substr(0, pos);
+        return this->is_defined(identifier);
+    }
     default:
         cout << "possible error checking if term is valid" << endl;
         return false;
@@ -884,6 +986,16 @@ identifier_type Generator::term_to_asm(term_node term, identifier_type expected)
                 file << "   cvtsi2sd %rax, %xmm0" << endl;
             return TYPE_INT;
         }
+        else if (this->get_type(term.value) == TYPE_ARRAY_INT)
+        {
+            file << "   movq -" << index * 8 + 8 << "(%rbp)" << ", %rax" << endl;
+            return TYPE_ARRAY_INT;
+        }
+        else if (this->get_type(term.value) == TYPE_ARRAY_REAL)
+        {
+            file << "   movq -" << index * 8 + 8 << "(%rbp)" << ", %rax" << endl;
+            return TYPE_ARRAY_REAL;
+        }
     }
     else if (term.kind == TERM_INT_LITERAL)
     {
@@ -902,6 +1014,61 @@ identifier_type Generator::term_to_asm(term_node term, identifier_type expected)
     {
         input_to_asm(term);
         return TYPE_INT;
+    }
+    else if (term.kind == TERM_ARRAY_INT_LITERAL)
+    {
+        // TODO!
+        return TYPE_ARRAY_INT;
+    }
+    else if (term.kind == TERM_ARRAY_REAL_LITERAL)
+    {
+        // TODO!
+        return TYPE_ARRAY_REAL;
+    }
+    else if (term.kind == TERM_ARRAY_ACCESS)
+    {
+        // TODO!
+        size_t pos = term.value.find(':');
+        string identifier = term.value.substr(0, pos);
+        string array_idx = term.value.substr(pos + 1);
+        unsigned int index = this->variable_index(identifier);
+
+        // store ptr to arr in %rcx.
+        file << "   movq -" << index * 8 + 8 << "(%rbp)" << ", %rcx" << endl;
+
+        // if we have an identifier as the array index, lets get it into %rbx.
+        if (!isdigit(array_idx[0]))
+        {
+            if (!this->is_defined(array_idx))
+            {
+                cout << "[leather] compilation error:" << endl
+                     << "    variable \"" << array_idx << "\" is not declared." << endl;
+                exit(0);
+                // sem error! :(
+            }
+            unsigned int index = this->variable_index(array_idx);
+            file << "   movq -" << index * 8 + 8 << "(%rbp)" << ", %rbx" << endl;
+        }
+        // if its just a number
+        else
+        {
+            file << "   movq $" << array_idx << ", %rbx" << endl;
+        }
+
+        if (this->get_type(identifier) == TYPE_ARRAY_INT)
+        {
+            // index into array, move into rax.
+            file << "   movq (%rcx, %rbx, 8), %rax" << endl;
+            if (expected == TYPE_REAL) // convert to real and store in xmm0 if expected is a real.
+                file << "   cvtsi2sd %rax, %xmm0" << endl;
+            return TYPE_INT;
+        }
+        else if (this->get_type(identifier) == TYPE_ARRAY_REAL)
+        {
+            // index into array, move into xmm0.
+            file << "   movsd (%rcx, %rbx, 8), %xmm0" << endl;
+            return TYPE_REAL;
+        }
     }
     else
     {
@@ -974,7 +1141,7 @@ void Generator::print_to_asm(print_node print)
     file << "   movq $0x0A, (%rcx)" << endl; // newline character at end file str
     file << "   dec %rcx" << endl;
 
-    if (expected == TYPE_INT)
+    if (expected == TYPE_INT || expected == TYPE_ARRAY_INT || expected == TYPE_ARRAY_REAL)
     {
         file << "   call int_to_ascii" << endl;
     }
@@ -1069,6 +1236,26 @@ identifier_type Generator::expected_binary_expr_result(term_binary_node binary_e
     {
         if (this->get_type(binary_expr.rhs.value) == TYPE_REAL)
             return TYPE_REAL;
+    }
+    if (binary_expr.lhs.kind == TERM_ARRAY_ACCESS)
+    {
+        size_t pos = binary_expr.lhs.value.find(':');
+        string identifier = binary_expr.lhs.value.substr(0, pos);
+        identifier_type array_type = this->get_type(identifier);
+        if (array_type == TYPE_ARRAY_REAL)
+        {
+            return TYPE_REAL;
+        }
+    }
+    if (binary_expr.rhs.kind == TERM_ARRAY_ACCESS)
+    {
+        size_t pos = binary_expr.rhs.value.find(':');
+        string identifier = binary_expr.rhs.value.substr(0, pos);
+        identifier_type array_type = this->get_type(identifier);
+        if (array_type == TYPE_ARRAY_REAL)
+        {
+            return TYPE_REAL;
+        }
     }
     return (binary_expr.lhs.kind == TERM_REAL_LITERAL || binary_expr.rhs.kind == TERM_REAL_LITERAL) ? TYPE_REAL : TYPE_INT;
 }

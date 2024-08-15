@@ -43,7 +43,10 @@ enum token_type
     OP_RIGHT_SHIFT, // >>
     FOR,
     COMMA,
-    SEMICOLON
+    SEMICOLON,
+    PERIOD,
+    OPEN_BRACE,
+    CLOSE_BRACE
 };
 
 class Token

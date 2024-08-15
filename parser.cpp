@@ -17,6 +17,15 @@ void Parser::advance()
     this->pos++;
 }
 
+Token Parser::peek()
+{
+    if (this->pos + 1 >= this->tokens.size())
+    {
+        return this->tokens[this->tokens.size() - 1];
+    }
+    return this->tokens[this->pos + 1];
+}
+
 // called when invalid syntax/parsing error
 void Parser::error(const string &expected)
 {
@@ -228,7 +237,7 @@ statement_node Parser::parse_for_loop()
     return stmt;
 }
 
-// <assignment> ::= <identifier> = <expr>
+// <assignment> ::= <identifier> = <expr> ALSO
 statement_node Parser::parse_assignment()
 {
     statement_node stmt;
@@ -238,6 +247,32 @@ statement_node Parser::parse_assignment()
     if (this->current_token().kind == IDENTIFIER)
     {
         identifier = this->current_token().value;
+        if (this->peek().kind == OPEN_BRACE)
+        {
+            // we are now parsing an array access
+            this->advance();
+            this->advance();
+            if (this->current_token().kind == INT_LITERAL || this->current_token().kind == IDENTIFIER)
+            {
+                identifier.push_back(':');
+                identifier.append(this->current_token().value);
+                stmt.kind = STMT_ARRAY_ASSIGN;
+                this->advance();
+            }
+            else
+            {
+                error("an array index");
+            }
+            if (!(this->current_token().kind == CLOSE_BRACE))
+            {
+                error("}");
+            }
+        }
+        else
+        {
+            stmt.kind = STMT_ASSIGN;
+            identifier = this->current_token().value;
+        }
         this->advance();
     }
     else
@@ -253,7 +288,6 @@ statement_node Parser::parse_assignment()
         error("=");
     }
     expr = this->parse_expr();
-    stmt.kind = STMT_ASSIGN;
     stmt.statement = assign_node{identifier, expr};
     return stmt;
 };
@@ -350,8 +384,33 @@ term_node Parser::parse_term()
     }
     else if (this->current_token().kind == IDENTIFIER)
     {
-        term.kind = TERM_IDENTIFIER;
         term.value = this->current_token().value;
+        if (this->peek().kind == OPEN_BRACE)
+        {
+            // we are now parsing an array access
+            this->advance();
+            this->advance();
+            if (this->current_token().kind == INT_LITERAL || this->current_token().kind == IDENTIFIER)
+            {
+                term.value.push_back(':');
+                term.value.append(this->current_token().value);
+                term.kind = TERM_ARRAY_ACCESS;
+                this->advance();
+            }
+            else
+            {
+                error("an array index");
+            }
+            if (!(this->current_token().kind == CLOSE_BRACE))
+            {
+                error("}");
+            }
+        }
+        else
+        {
+            term.kind = TERM_IDENTIFIER;
+            term.value = this->current_token().value;
+        }
     }
     else
     {
@@ -548,6 +607,35 @@ statement_node Parser::parse_declaration()
         // optional "!" for fun :)
         this->advance();
     }
+    else if (this->current_token().kind == PERIOD)
+    {
+        // this is supposed to be an array.
+        this->advance();
+        if (this->current_token().kind == PERIOD)
+        {
+            this->advance();
+            if (this->current_token().kind == PERIOD)
+            {
+                this->advance();
+                if (decl.type == TYPE_INT || decl.type == TYPE_BOOL)
+                {
+                    decl.type = TYPE_ARRAY_INT;
+                }
+                else if (decl.type == TYPE_REAL)
+                {
+                    decl.type = TYPE_ARRAY_REAL;
+                }
+            }
+            else
+            {
+                error(".");
+            }
+        }
+        else
+        {
+            error(".");
+        }
+    }
     if (this->current_token().kind == IDENTIFIER)
     {
         decl.identifier = this->current_token().value;
@@ -595,7 +683,57 @@ statement_node Parser::parse_declaration()
             expr.expr = t;
             decl.expr = expr;
         }
+        else if (decl.type == TYPE_ARRAY_INT)
+        {
+            term_node t;
+            t.kind = TERM_ARRAY_INT_LITERAL;
+            t.value = "";
+            expr_node expr;
+            expr.kind = UNARY_EXPR;
+            expr.expr = t;
+            decl.expr = expr;
+        }
+        else if (decl.type == TYPE_ARRAY_REAL)
+        {
+            term_node t;
+            t.kind = TERM_ARRAY_REAL_LITERAL;
+            t.value = "";
+            expr_node expr;
+            expr.kind = UNARY_EXPR;
+            expr.expr = t;
+            decl.expr = expr;
+        }
     }
+
+    if (decl.type == TYPE_ARRAY_INT || decl.type == TYPE_ARRAY_REAL)
+    {
+        if (this->current_token().kind == OPEN_BRACE)
+        {
+            this->advance();
+        }
+        else
+        {
+            error("{");
+        }
+        if (this->current_token().kind == INT_LITERAL)
+        {
+            get<term_node>(decl.expr.expr).value = this->current_token().value;
+            this->advance();
+        }
+        else
+        {
+            error("length of an array");
+        }
+        if (this->current_token().kind == CLOSE_BRACE)
+        {
+            this->advance();
+        }
+        else
+        {
+            error("}");
+        }
+    }
+
     stmt.kind = STMT_DECLARATION;
     stmt.statement = decl;
     return stmt;
@@ -632,6 +770,12 @@ void print_declaration(declaration_node decl)
         break;
     case TYPE_REAL:
         cout << "(real) ";
+        break;
+    case TYPE_ARRAY_INT:
+        cout << "(array<int>) len ";
+        break;
+    case TYPE_ARRAY_REAL:
+        cout << "(array<real>) len ";
         break;
     default:
         cout << "(type?) ";
@@ -738,6 +882,10 @@ void print_statement(statement_node stmt)
     switch (stmt.kind)
     {
     case STMT_ASSIGN:
+        print_assign(get<assign_node>(stmt.statement));
+        break;
+    case STMT_ARRAY_ASSIGN:
+        cout << "(array) ";
         print_assign(get<assign_node>(stmt.statement));
         break;
     case STMT_GOTO:

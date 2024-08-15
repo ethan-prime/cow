@@ -11,6 +11,7 @@ using namespace std;
 enum statement_type
 {
     STMT_ASSIGN,
+    STMT_ARRAY_ASSIGN,
     STMT_IF_THEN,
     STMT_GOTO,
     STMT_PRINT, // make this a function in later versions?
@@ -39,6 +40,9 @@ enum term_kind
     TERM_INT_LITERAL,
     TERM_REAL_LITERAL,
     TERM_IDENTIFIER,
+    TERM_ARRAY_INT_LITERAL,
+    TERM_ARRAY_REAL_LITERAL,
+    TERM_ARRAY_ACCESS,
 };
 
 enum identifier_type
@@ -46,6 +50,8 @@ enum identifier_type
     TYPE_INT,
     TYPE_REAL,
     TYPE_BOOL,
+    TYPE_ARRAY_INT,
+    TYPE_ARRAY_REAL,
     TYPE_INVALID,
 };
 
@@ -161,6 +167,8 @@ public:
 
     // advances to next token in the tokenfeed
     void advance();
+
+    Token peek();
 
     // parses a list of tokens into a program. returns a program node (AST representation).
     program_node parse_program();

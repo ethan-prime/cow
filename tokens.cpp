@@ -83,6 +83,12 @@ string Token::repr()
         return "comma";
     case SEMICOLON:
         return "semicolon";
+    case PERIOD:
+        return ". (...)";
+    case OPEN_BRACE:
+        return "open_brace";
+    case CLOSE_BRACE:
+        return "close_brace";
     default:
         return "moo! something went wrong when tokenizing...";
     }
