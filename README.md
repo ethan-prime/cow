@@ -22,15 +22,11 @@ while num != 0 do {
     real! cur_guess = 1.0
     real! next_guess
 
-    int! i = 0
-    real! add_part
-
-    while i < 20 do {
-        add_part = num / cur_guess
+    for int! i = 0; i < 20; i = i + 1 do {
+        real! add_part = num / cur_guess
         next_guess = cur_guess + add_part
         next_guess = next_guess / 2
         cur_guess = next_guess
-        i = i + 1
     }
 
     moo cur_guess
@@ -66,7 +62,7 @@ _start:
    xor %r8, %r8
    call ascii_to_int
    movq %rax, -8(%rbp)
-.STARTWHILE0:
+.STARTLOOP0:
    movq -8(%rbp), %rax
    mov %rax, %rcx
    movq $0, %rax
@@ -74,7 +70,7 @@ _start:
    setne %al
    movzbq %al, %rax
    test %rax, %rax
-   jz .ENDWHILE0
+   jz .ENDLOOP0
    movabs $0x3FF0000000000000, %rax
    movq %rax, %xmm0
    movsd %xmm0, -16(%rbp)
@@ -83,10 +79,7 @@ _start:
    movsd %xmm0, -24(%rbp)
    movq $0, %rax
    movq %rax, -32(%rbp)
-   movabs $0x0, %rax
-   movq %rax, %xmm0
-   movsd %xmm0, -40(%rbp)
-.STARTWHILE1:
+.STARTLOOP1:
    movq -32(%rbp), %rax
    mov %rax, %rcx
    movq $20, %rax
@@ -94,7 +87,7 @@ _start:
    setl %al
    movzbq %al, %rax
    test %rax, %rax
-   jz .ENDWHILE1
+   jz .ENDLOOP1
    movsd -16(%rbp), %xmm0
    movsd %xmm0, %xmm1
    movq -8(%rbp), %rax
@@ -119,8 +112,8 @@ _start:
    movq $1, %rax
    addq %rcx, %rax
    movq %rax, -32(%rbp)
-   jmp .STARTWHILE1
-.ENDWHILE1:
+   jmp .STARTLOOP1
+.ENDLOOP1:
    movsd -16(%rbp), %xmm0
    movq $1, %rsi
    mov %rbp, %rcx
@@ -146,8 +139,8 @@ _start:
    xor %r8, %r8
    call ascii_to_int
    movq %rax, -8(%rbp)
-   jmp .STARTWHILE0
-.ENDWHILE0:
+   jmp .STARTLOOP0
+.ENDLOOP0:
 .exit:
    movq $60, %rax
    xor %rdi, %rdi
@@ -227,6 +220,7 @@ double_to_ascii:
    mov %r9, %rax
    call int_to_ascii
    ret
+
 ```
 
 ```
