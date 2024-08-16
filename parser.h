@@ -40,6 +40,7 @@ enum term_kind
     TERM_INPUT,
     TERM_INT_LITERAL,
     TERM_REAL_LITERAL,
+    TERM_STR_LITERAL,
     TERM_IDENTIFIER,
     TERM_ARRAY_INT_LITERAL,
     TERM_ARRAY_REAL_LITERAL,
@@ -51,9 +52,16 @@ enum identifier_type
     TYPE_INT,
     TYPE_REAL,
     TYPE_BOOL,
+    TYPE_STR,
     TYPE_ARRAY_INT,
     TYPE_ARRAY_REAL,
     TYPE_INVALID,
+};
+
+struct string_
+{
+    string value;
+    int length;
 };
 
 struct expr_node;
@@ -196,6 +204,8 @@ public:
 
     // parses a list of tokens into a program. returns a program node (AST representation).
     program_node parse_program();
+
+    vector<string_> get_strings();
 
     statement_node parse_statement();
 

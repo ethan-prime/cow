@@ -40,6 +40,7 @@ enum token_type
     KEYW_INT,
     KEYW_BOOL,
     KEYW_REAL,
+    KEYW_STR,
     OP_RIGHT_SHIFT, // >>
     FOR,
     COMMA,

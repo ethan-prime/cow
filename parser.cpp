@@ -94,7 +94,7 @@ statement_node Parser::parse_statement()
         this->advance();
         stmt.kind = STMT_BREAK;
     }
-    else if (this->current_token().kind == KEYW_BOOL || this->current_token().kind == KEYW_INT || this->current_token().kind == KEYW_REAL)
+    else if (this->current_token().kind == KEYW_BOOL || this->current_token().kind == KEYW_INT || this->current_token().kind == KEYW_REAL || this->current_token().kind == KEYW_STR)
     {
         stmt = this->parse_declaration();
     }
@@ -385,6 +385,11 @@ term_node Parser::parse_term()
         term.kind = TERM_REAL_LITERAL;
         term.value = this->current_token().value;
     }
+    else if (this->current_token().kind == STR_LITERAL)
+    {
+        term.kind = TERM_STR_LITERAL;
+        term.value = this->current_token().value;
+    }
     else if (this->current_token().kind == IDENTIFIER)
     {
         term.value = this->current_token().value;
@@ -601,6 +606,11 @@ statement_node Parser::parse_declaration()
         decl.type = TYPE_BOOL;
         this->advance();
     }
+    else if (this->current_token().kind == KEYW_STR)
+    {
+        decl.type = TYPE_STR;
+        this->advance();
+    }
     else
     {
         error("a type");
@@ -627,6 +637,10 @@ statement_node Parser::parse_declaration()
                 else if (decl.type == TYPE_REAL)
                 {
                     decl.type = TYPE_ARRAY_REAL;
+                }
+                else
+                {
+                    error("int/bool/real array - array type not supported (str?)");
                 }
             }
             else
@@ -686,6 +700,10 @@ statement_node Parser::parse_declaration()
             expr.kind = UNARY_EXPR;
             expr.expr = t;
             decl.expr = expr;
+        }
+        else if (decl.type == TYPE_STR)
+        {
+            error("strings must be specified on declaration!");
         }
         else if (decl.type == TYPE_ARRAY_INT)
         {
@@ -786,6 +804,9 @@ void print_declaration(declaration_node decl)
         break;
     case TYPE_REAL:
         cout << "(real) ";
+        break;
+    case TYPE_STR:
+        cout << "(str) ";
         break;
     default:
         cout << "(type?) ";
@@ -1059,4 +1080,18 @@ void print_for_loop(for_loop_node for_loop)
         print_statement(*stmt);
     }
     cout << "   }" << endl;
+}
+
+vector<string_> Parser::get_strings()
+{
+    vector<string_> strings_;
+    for (auto token : this->tokens)
+    {
+        if (token.kind == STR_LITERAL)
+        {
+            int length = token.value.length();
+            strings_.push_back(string_{token.value, length});
+        }
+    }
+    return strings_;
 }

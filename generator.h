@@ -21,10 +21,11 @@ private:
     unsigned int current_loop_index;
     unsigned int buffer_ptr; // 24 bytes buffer to flush text to console
     ofstream file;
+    vector<string_> strings_;
 
 public:
     // constructor
-    Generator(program_node program, string &output_filename);
+    Generator(program_node program, string &output_filename, vector<string_> strings_);
 
     // CODE GENERATORS
 
@@ -52,6 +53,7 @@ public:
     // HELPERS
 
     int variable_index(string var);
+    int string_index(string str);
 
     void collect_variables(vector<statement_node> stmts);
     void collect_labels();

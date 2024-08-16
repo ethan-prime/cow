@@ -89,6 +89,8 @@ string Token::repr()
         return "open_brace";
     case CLOSE_BRACE:
         return "close_brace";
+    case KEYW_STR:
+        return "keyw_str";
     default:
         return "moo! something went wrong when tokenizing...";
     }

@@ -7,7 +7,7 @@
 using namespace std;
 
 // constructor
-Generator::Generator(program_node program, string &output_filename) : program(program), current_if_index(0), current_loop_index(0), file(output_filename)
+Generator::Generator(program_node program, string &output_filename, vector<string_> strings_) : program(program), current_if_index(0), current_loop_index(0), file(output_filename), strings_(strings_)
 {
     if (!file)
     {
@@ -28,6 +28,13 @@ void Generator::to_asm(bool logging)
     if (!file.is_open())
     {
         cout << "file is closed bruh" << endl;
+    }
+
+    file << ".section .data" << endl;
+    for (auto str : this->strings_)
+    {
+        file << "str" << this->string_index(str.value) << ":" << endl;
+        file << "   .string \"" << str.value << "\"" << endl;
     }
 
     // INITIAL SETUP
@@ -209,6 +216,35 @@ void Generator::to_asm(bool logging)
     file << "   movq $9, %rax" << endl;
     file << "   syscall" << endl;
     file << "   ret" << endl;
+
+    file << endl;
+    file << "strcpy:" << endl;
+    file << "   test %rdx, %rdx" << endl;
+    file << "   jz .end_strcpy" << endl;
+    file << "   movb (%rdi), %al" << endl;
+    file << "   movb %al, (%rsi)" << endl;
+    file << "   dec %rdx" << endl;
+    file << "   inc %rdi" << endl;
+    file << "   inc %rsi" << endl;
+    file << "   jmp strcpy" << endl;
+    file << ".end_strcpy:" << endl;
+    file << "   movb $0, (%rsi)" << endl;
+    file << "   ret" << endl;
+
+    file << endl;
+    file << "strlen:" << endl;
+    file << "   xor %r9, %r9" << endl;
+    file << ".strlen_loop:" << endl;
+    file << "   movb (%rdi), %al" << endl;
+    file << "   test %al, %al" << endl;
+    file << "   jz .end_strlen" << endl;
+    file << "   inc %r9" << endl;
+    file << "   inc %rdi" << endl;
+    file << "   jmp .strlen_loop" << endl;
+    file << ".end_strlen:" << endl;
+    file << "   mov %r9, %rax" << endl;
+    file << "   ret" << endl;
+
     file.close();
 }
 
@@ -302,6 +338,12 @@ void Generator::assign_to_asm(assign_node assign)
     {
         file << "   movsd %xmm0, -" << index * 8 + 8 << "(%rbp)" << endl;
     }
+    else if (t == TYPE_STR)
+    {
+        cout << "[leather] compilation error:" << endl
+             << "    " << "strings are constant, when assigning \'" << assign.identifier << "\'" << endl;
+        exit(0);
+    }
 }
 
 void Generator::array_assign_to_asm(array_assign_node assign)
@@ -391,6 +433,35 @@ void Generator::declaration_to_asm(declaration_node decl)
     else if (decl.type == TYPE_REAL)
     {
         file << "   movsd %xmm0, -" << index * 8 + 8 << "(%rbp)" << endl;
+    }
+    else if (decl.type == TYPE_STR)
+    {
+        if (decl.expr.kind != UNARY_EXPR)
+        {
+            cout << "[leather] compilation error:" << endl
+                 << "    attemped binary expression with string" << endl;
+            exit(0);
+        }
+        int strlen = get<term_node>(decl.expr.expr).value.size();
+        file << "   movq $" << strlen + 1 << ", %rdi" << endl; // + 1 for \0
+        // allocate and store ptr of array!
+        file << "   xor %r12, %r12" << endl;
+        file << "   call heapalloc" << endl;
+        // save ptr at address
+        file << "   movq %rax, -" << index * 8 + 8 << "(%rbp)" << endl;
+        // TODO!
+        // setup for strcpy
+        int string_index = this->string_index(get<term_node>(decl.expr.expr).value);
+        if (string_index == -1)
+        {
+            cout << "[leather] compilation error:" << endl
+                 << "    " << "unknown string \"" << get<term_node>(decl.expr.expr).value << "\"" << endl;
+            exit(0);
+        }
+        file << "   lea str" << string_index << "(%rip), %rdi" << endl;
+        file << "   mov %rax, %rsi" << endl;
+        file << "   movq $" << strlen << ", %rdx" << endl;
+        file << "   call strcpy" << endl;
     }
 }
 
@@ -528,6 +599,8 @@ bool Generator::term_valid(term_node term)
     case TERM_INT_LITERAL:
         return true;
     case TERM_REAL_LITERAL:
+        return true;
+    case TERM_STR_LITERAL:
         return true;
     case TERM_IDENTIFIER:
         return this->is_defined(term.value);
@@ -928,6 +1001,17 @@ int Generator::variable_index(string var)
     return -1;
 }
 
+int Generator::string_index(string str)
+{
+    for (unsigned int i = 0; i < this->strings_.size(); i++)
+    {
+        if (this->strings_[i].value == str)
+            return i;
+    }
+    // not found
+    return -1;
+}
+
 identifier_type Generator::expr_to_asm(expr_node expr, string temp_register)
 {
     // WE WANT TO STORE INT RESULTS IN %rax AND REAL RESULTS IN %xmm0.
@@ -1130,6 +1214,12 @@ identifier_type Generator::term_to_asm(term_node term, identifier_type expected)
                 file << "   cvtsi2sd %rax, %xmm0" << endl;
             return TYPE_INT;
         }
+        else if (this->get_type(term.value) == TYPE_STR)
+        {
+            // load ptr to str into %rax
+            file << "   movq -" << index * 8 + 8 << "(%rbp)" << ", %rax" << endl;
+            return TYPE_STR;
+        }
         else if (this->get_type(term.value) == TYPE_ARRAY_INT)
         {
             file << "   movq -" << index * 8 + 8 << "(%rbp)" << ", %rax" << endl;
@@ -1153,6 +1243,18 @@ identifier_type Generator::term_to_asm(term_node term, identifier_type expected)
         file << "   movabs $" << convertToHex(term.value) << ", %rax" << endl;
         file << "   movq %rax, %xmm0" << endl;
         return TYPE_REAL;
+    }
+    else if (term.kind == TERM_STR_LITERAL)
+    {
+        int string_index = this->string_index(term.value);
+        if (string_index == -1)
+        {
+            cout << "[leather] compilation error:" << endl
+                 << "    " << "unknown string \"" << term.value << "\"" << endl;
+            exit(0);
+        }
+        file << "   lea str" << string_index << "(%rip), %rax" << endl;
+        return TYPE_STR;
     }
     else if (term.kind == TERM_INPUT)
     {
@@ -1301,20 +1403,35 @@ void Generator::print_to_asm(print_node print)
     // now, we have to allocate memory on the stack
     // to store our buffer
 
-    // preparation for call to int_to_ascii
-    file << "   movq $1, %rsi" << endl; // we have to print at least a \n
-    file << "   mov %rbp, %rcx" << endl;
-    file << "   addq $" << this->buffer_ptr + 63 << ", %rcx" << endl;
-    file << "   movq $0x0A, (%rcx)" << endl; // newline character at end file str
-    file << "   dec %rcx" << endl;
-
-    if (expected == TYPE_INT || expected == TYPE_ARRAY_INT || expected == TYPE_ARRAY_REAL)
+    if (expected == TYPE_INT || expected == TYPE_ARRAY_INT || expected == TYPE_ARRAY_REAL || expected == TYPE_REAL)
     {
-        file << "   call int_to_ascii" << endl;
+        // preparation for call to int_to_ascii
+        file << "   movq $1, %rsi" << endl; // we have to print at least a \n
+        file << "   mov %rbp, %rcx" << endl;
+        file << "   addq $" << this->buffer_ptr + 63 << ", %rcx" << endl;
+        file << "   movq $0x0A, (%rcx)" << endl; // newline character at end file str
+        file << "   dec %rcx" << endl;
+        if (expected == TYPE_REAL)
+        {
+            file << "   call double_to_ascii" << endl;
+        }
+        else
+        {
+            file << "   call int_to_ascii" << endl;
+        }
     }
-    else if (expected == TYPE_REAL)
+    else if (expected == TYPE_STR)
     {
-        file << "   call double_to_ascii" << endl;
+        // we need to get the str len and the ptr to the string
+        file << "   mov %rax, %rsi" << endl;
+
+        file << "   mov %rax, %rdi" << endl;
+        file << "   call strlen" << endl;
+        file << "   mov %rax, %rdx" << endl;
+        file << "   mov %rsi, %r8" << endl;
+        file << "   addq %rdx, %r8" << endl;
+        file << "   movb $0x0A, (%r8)" << endl; // adding a newline character for printing
+        file << "   inc %rdx" << endl;          // increment for space for newline
     }
 
     file << "   movq $1, %rax" << endl;

@@ -112,6 +112,11 @@ bool is_keyword(const string &buf, token_type &kind)
         kind = KEYW_BOOL;
         return true;
     }
+    else if (buf == "str")
+    {
+        kind = KEYW_STR;
+        return true;
+    }
     else if (buf == "for")
     {
         kind = FOR;
@@ -262,6 +267,19 @@ Token Lexer::next_token()
             return Token(EQUALEQUAL, "", this->line_number);
         }
         return Token(EQUAL, "", this->line_number);
+    }
+    else if (this->current_char == '"')
+    {
+        // string!
+        string buf = "";
+        this->read();
+        while (this->current_char != '"')
+        {
+            buf.push_back(this->current_char);
+            this->read();
+        }
+        this->read();
+        return Token(STR_LITERAL, buf, this->line_number);
     }
     // label !?
     else if (this->current_char == ':')

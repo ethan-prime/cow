@@ -5,7 +5,7 @@ todo.txt
 .gdb_history
 example.s
 *.out
-*.s
+/*.s
 *.o
 *.milk
 *.exe
