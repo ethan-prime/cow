@@ -375,7 +375,7 @@ term_node Parser::parse_term()
     {
         term.kind = TERM_INPUT;
     }
-    if (this->current_token().kind == RANDOM)
+    else if (this->current_token().kind == RANDOM)
     {
         term.kind = TERM_RANDOM;
     }
@@ -1090,6 +1090,16 @@ void print_for_loop(for_loop_node for_loop)
     cout << "   }" << endl;
 }
 
+bool Parser::in_strings_(vector<string_> strings_, string str)
+{
+    for (auto s : strings_)
+    {
+        if (s.value == str)
+            return true;
+    }
+    return false;
+}
+
 vector<string_> Parser::get_strings()
 {
     vector<string_> strings_;
@@ -1098,7 +1108,10 @@ vector<string_> Parser::get_strings()
         if (token.kind == STR_LITERAL)
         {
             int length = token.value.length();
-            strings_.push_back(string_{token.value, length});
+            if (!in_strings_(strings_, token.value))
+            {
+                strings_.push_back(string_{token.value, length});
+            }
         }
     }
     return strings_;

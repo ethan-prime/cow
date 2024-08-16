@@ -207,6 +207,7 @@ public:
     program_node parse_program();
 
     vector<string_> get_strings();
+    bool in_strings_(vector<string_> strings_, string str);
 
     statement_node parse_statement();
 

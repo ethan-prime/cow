@@ -247,10 +247,26 @@ void Generator::to_asm(bool logging)
 
     file << endl;
     file << "get_rand:" << endl;
+    file << "   movq $318, %rax" << endl;
     file << "   movq $8, %rsi" << endl;
     file << "   movq $0, %rdx" << endl;
     file << "   syscall" << endl;
     file << "   movq (%rdi), %rax" << endl;
+    file << "   ret" << endl;
+
+    file << endl;
+    file << "print_str:" << endl;
+    file << "   mov %rdi, %rsi" << endl;
+    file << "   call strlen" << endl;
+    file << "   mov %rax, %rdx" << endl;
+    file << "   mov %rsi, %r8" << endl;
+    file << "   addq %rdx, %r8" << endl;
+    file << "   movb $0x0A, (%r8)" << endl;
+    file << "   inc %rdx" << endl;
+    file << "   movq $1, %rax" << endl;
+    file << "   movq $1, %rdi" << endl;
+    file << "   syscall" << endl;
+    file << "   movb $0, (%r8)" << endl;
     file << "   ret" << endl;
 
     file.close();
@@ -1208,7 +1224,9 @@ void Generator::random_to_asm()
     // get ptr to free memory in %rdi
     file << "   mov %rbp, %rdi" << endl;
     file << "   addq $" << this->buffer_ptr << ", %rdi" << endl;
+    file << "   push %rcx" << endl;
     file << "   call get_rand" << endl;
+    file << "   pop %rcx" << endl;
 }
 
 identifier_type Generator::term_to_asm(term_node term, identifier_type expected)
@@ -1434,6 +1452,7 @@ void Generator::print_to_asm(print_node print)
         file << "   addq $" << this->buffer_ptr + 63 << ", %rcx" << endl;
         file << "   movq $0x0A, (%rcx)" << endl; // newline character at end file str
         file << "   dec %rcx" << endl;
+
         if (expected == TYPE_REAL)
         {
             file << "   call double_to_ascii" << endl;
@@ -1442,24 +1461,15 @@ void Generator::print_to_asm(print_node print)
         {
             file << "   call int_to_ascii" << endl;
         }
+        file << "   movq $1, %rax" << endl;
+        file << "   movq $1, %rdi" << endl;
+        file << "   syscall" << endl;
     }
     else if (expected == TYPE_STR)
     {
-        // we need to get the str len and the ptr to the string
-        file << "   mov %rax, %rsi" << endl;
-
         file << "   mov %rax, %rdi" << endl;
-        file << "   call strlen" << endl;
-        file << "   mov %rax, %rdx" << endl;
-        file << "   mov %rsi, %r8" << endl;
-        file << "   addq %rdx, %r8" << endl;
-        file << "   movb $0x0A, (%r8)" << endl; // adding a newline character for printing
-        file << "   inc %rdx" << endl;          // increment for space for newline
+        file << "   call print_str" << endl;
     }
-
-    file << "   movq $1, %rax" << endl;
-    file << "   movq $1, %rdi" << endl;
-    file << "   syscall" << endl;
 }
 
 void Generator::while_loop_to_asm(while_loop_node while_loop)
