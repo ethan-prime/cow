@@ -91,6 +91,8 @@ string Token::repr()
         return "close_brace";
     case KEYW_STR:
         return "keyw_str";
+    case RANDOM:
+        return "random";
     default:
         return "moo! something went wrong when tokenizing...";
     }

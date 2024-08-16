@@ -122,6 +122,11 @@ bool is_keyword(const string &buf, token_type &kind)
         kind = FOR;
         return true;
     }
+    else if (buf == "random")
+    {
+        kind = RANDOM;
+        return true;
+    }
     else
     {
         return false;

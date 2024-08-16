@@ -11,6 +11,7 @@ enum token_type
     INT_LITERAL,
     REAL_LITERAL,
     INPUT,
+    RANDOM,
     PRINT,
     GOTO,
     IF,

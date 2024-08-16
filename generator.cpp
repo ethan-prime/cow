@@ -245,6 +245,14 @@ void Generator::to_asm(bool logging)
     file << "   mov %r9, %rax" << endl;
     file << "   ret" << endl;
 
+    file << endl;
+    file << "get_rand:" << endl;
+    file << "   movq $8, %rsi" << endl;
+    file << "   movq $0, %rdx" << endl;
+    file << "   syscall" << endl;
+    file << "   movq (%rdi), %rax" << endl;
+    file << "   ret" << endl;
+
     file.close();
 }
 
@@ -595,6 +603,8 @@ bool Generator::term_valid(term_node term)
     switch (term.kind)
     {
     case TERM_INPUT:
+        return true;
+    case TERM_RANDOM:
         return true;
     case TERM_INT_LITERAL:
         return true;
@@ -1193,6 +1203,14 @@ void Generator::input_to_asm(term_node term)
     // input value is now in %rax.
 }
 
+void Generator::random_to_asm()
+{
+    // get ptr to free memory in %rdi
+    file << "   mov %rbp, %rdi" << endl;
+    file << "   addq $" << this->buffer_ptr << ", %rdi" << endl;
+    file << "   call get_rand" << endl;
+}
+
 identifier_type Generator::term_to_asm(term_node term, identifier_type expected)
 {
     // we need to store the result in %rax or %xmm0 if decimal.
@@ -1259,6 +1277,11 @@ identifier_type Generator::term_to_asm(term_node term, identifier_type expected)
     else if (term.kind == TERM_INPUT)
     {
         input_to_asm(term);
+        return TYPE_INT;
+    }
+    else if (term.kind == TERM_RANDOM)
+    {
+        random_to_asm();
         return TYPE_INT;
     }
     else if (term.kind == TERM_ARRAY_INT_LITERAL)
@@ -1523,8 +1546,7 @@ identifier_type Generator::expected_binary_expr_result(term_binary_node binary_e
     }
     if (binary_expr.lhs.kind == TERM_ARRAY_ACCESS)
     {
-        size_t pos = binary_expr.lhs.value.find(':');
-        string identifier = binary_expr.lhs.value.substr(0, pos);
+        string identifier = binary_expr.lhs.value;
         identifier_type array_type = this->get_type(identifier);
         if (array_type == TYPE_ARRAY_REAL)
         {
@@ -1533,8 +1555,7 @@ identifier_type Generator::expected_binary_expr_result(term_binary_node binary_e
     }
     if (binary_expr.rhs.kind == TERM_ARRAY_ACCESS)
     {
-        size_t pos = binary_expr.rhs.value.find(':');
-        string identifier = binary_expr.rhs.value.substr(0, pos);
+        string identifier = binary_expr.rhs.value;
         identifier_type array_type = this->get_type(identifier);
         if (array_type == TYPE_ARRAY_REAL)
         {

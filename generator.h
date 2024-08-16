@@ -45,6 +45,7 @@ public:
     void comparison_to_asm(comparison_node comp);
     identifier_type term_to_asm(term_node term, identifier_type expect = TYPE_INT);
     void input_to_asm(term_node term);
+    void random_to_asm();
     void while_loop_to_asm(while_loop_node while_loop);
     void for_loop_to_asm(for_loop_node for_loop);
     void declaration_to_asm(declaration_node decl);

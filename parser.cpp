@@ -375,6 +375,10 @@ term_node Parser::parse_term()
     {
         term.kind = TERM_INPUT;
     }
+    if (this->current_token().kind == RANDOM)
+    {
+        term.kind = TERM_RANDOM;
+    }
     else if (this->current_token().kind == INT_LITERAL)
     {
         term.kind = TERM_INT_LITERAL;
@@ -846,6 +850,10 @@ void print_term(term_node term)
     else if (term.kind == TERM_INPUT)
     {
         cout << "INPUT";
+    }
+    else if (term.kind == TERM_RANDOM)
+    {
+        cout << "RANDOM";
     }
     else
     {

@@ -38,6 +38,7 @@ enum expr_type
 enum term_kind
 {
     TERM_INPUT,
+    TERM_RANDOM,
     TERM_INT_LITERAL,
     TERM_REAL_LITERAL,
     TERM_STR_LITERAL,
