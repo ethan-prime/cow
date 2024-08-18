@@ -48,7 +48,9 @@ enum token_type
     SEMICOLON,
     PERIOD,
     OPEN_BRACE,
-    CLOSE_BRACE
+    CLOSE_BRACE,
+    RETURN, // ->
+    DEFINE,
 };
 
 class Token

@@ -102,6 +102,10 @@ statement_node Parser::parse_statement()
     {
         stmt = this->parse_for_loop();
     }
+    else if (this->current_token().kind == DEFINE)
+    {
+        stmt = this->parse_function_declaration();
+    }
     else
     {
         error("a statement");
@@ -764,6 +768,97 @@ statement_node Parser::parse_declaration()
     return stmt;
 }
 
+statement_node Parser::parse_function_declaration()
+{
+    string identifier;
+    identifier_type type;
+    vector<statement_node *> stmts;
+    expr_node ret;
+
+    if (this->current_token().kind == DEFINE)
+    {
+        this->advance();
+    }
+    else
+    {
+        error("define");
+    }
+    if (this->current_token().kind == IDENTIFIER)
+    {
+        identifier = this->current_token().value;
+        this->advance();
+    }
+    else
+    {
+        error("function identifier");
+    }
+    if (this->current_token().kind == RETURN)
+    {
+        this->advance();
+    }
+    else
+    {
+        error("->");
+    }
+    if (this->current_token().kind == KEYW_INT || this->current_token().kind == KEYW_BOOL || this->current_token().kind == KEYW_REAL)
+    {
+        switch (this->current_token().kind)
+        {
+        case KEYW_INT:
+            type = TYPE_INT;
+            break;
+        case KEYW_BOOL:
+            type = TYPE_INT;
+            break;
+        case KEYW_REAL:
+            type = TYPE_REAL;
+            break;
+        default:
+            error("invalid return type");
+        }
+        this->advance();
+    }
+    else
+    {
+        error("return type");
+    }
+    if (this->current_token().kind == OPEN_BRACKET)
+    {
+        this->advance();
+    }
+    else
+    {
+        error("{");
+    }
+    while (this->current_token().kind != RETURN)
+    {
+        stmts.push_back(new statement_node(this->parse_statement()));
+    }
+    if (this->current_token().kind == RETURN)
+    {
+        this->advance();
+        ret = this->parse_expr();
+    }
+    else
+    {
+        error("->");
+    }
+    if (this->current_token().kind == CLOSE_BRACKET)
+    {
+        this->advance();
+    }
+    else
+    {
+        error("}");
+    }
+
+    statement_node stmt;
+    stmt.kind = STMT_FUNCTION_DECLARATION;
+    stmt.statement = function_def_node{identifier, stmts, type, ret};
+
+    return stmt;
+}
+
 // prints AST of program
 void print_program(program_node program)
 {
@@ -992,6 +1087,9 @@ void print_statement(statement_node stmt)
     case STMT_BREAK:
         cout << "BREAK" << endl;
         break;
+    case STMT_FUNCTION_DECLARATION:
+        print_function_declaration(get<function_def_node>(stmt.statement));
+        break;
     default:
         break;
     }
@@ -1088,6 +1186,33 @@ void print_for_loop(for_loop_node for_loop)
         print_statement(*stmt);
     }
     cout << "   }" << endl;
+}
+
+void print_function_declaration(function_def_node function_def)
+{
+    cout << "DEFINE function " << function_def.identifier << " -> ";
+    switch (function_def.return_type)
+    {
+    case TYPE_INT:
+        cout << " int ";
+        break;
+    case TYPE_REAL:
+        cout << " real ";
+        break;
+    default:
+        cout << " ???? ";
+        break;
+    }
+    cout << "as {" << endl;
+    for (auto stmt : function_def.statements)
+    {
+        cout << "       ";
+        print_statement(*stmt);
+    }
+    cout << "       -> ";
+    print_expr(function_def.return_expr);
+    cout << endl
+         << "   }" << endl;
 }
 
 bool Parser::in_strings_(vector<string_> strings_, string str)

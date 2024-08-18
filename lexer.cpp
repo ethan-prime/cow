@@ -127,6 +127,11 @@ bool is_keyword(const string &buf, token_type &kind)
         kind = RANDOM;
         return true;
     }
+    else if (buf == "define")
+    {
+        kind = DEFINE;
+        return true;
+    }
     else
     {
         return false;
@@ -166,6 +171,13 @@ Token Lexer::next_token()
     }
     else if (this->current_char == '-')
     {
+        if (this->peek() == '>')
+        {
+            this->read();
+            this->read();
+            return Token(RETURN, "", this->line_number);
+        }
+
         this->read();
         string buf = "-";
         int is_real = 0;

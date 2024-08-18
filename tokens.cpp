@@ -93,6 +93,10 @@ string Token::repr()
         return "keyw_str";
     case RANDOM:
         return "random";
+    case RETURN:
+        return "return";
+    case DEFINE:
+        return "define";
     default:
         return "moo! something went wrong when tokenizing...";
     }

@@ -21,6 +21,7 @@ enum statement_type
     STMT_BREAK,
     STMT_DECLARATION,
     STMT_ARRAY_DECLARATION,
+    STMT_FUNCTION_DECLARATION,
 };
 
 enum expr_type
@@ -141,6 +142,15 @@ struct if_then_node
     vector<statement_node *> statements;
 };
 
+struct function_def_node
+{
+    // add args later?
+    string identifier;
+    vector<statement_node *> statements;
+    identifier_type return_type;
+    expr_node return_expr;
+};
+
 struct goto_node
 {
     string label;
@@ -173,7 +183,7 @@ struct for_loop_node
 struct statement_node
 {
     statement_type kind;
-    variant<assign_node, if_then_node, goto_node, print_node, label_node, while_loop_node, for_loop_node, declaration_node, array_declare_node, array_assign_node> statement;
+    variant<assign_node, if_then_node, goto_node, print_node, label_node, while_loop_node, for_loop_node, declaration_node, array_declare_node, array_assign_node, function_def_node> statement;
 };
 
 struct program_node
@@ -220,6 +230,7 @@ public:
     statement_node parse_while_loop();
     statement_node parse_for_loop();
     statement_node parse_declaration();
+    statement_node parse_function_declaration();
 
     expr_node parse_expr();
 
@@ -242,3 +253,4 @@ void print_for_loop(for_loop_node for_loop);
 void print_array_declare(array_declare_node decl);
 void print_array_assign(array_assign_node assign);
 void print_term(term_node term);
+void print_function_declaration(function_def_node function_def);
