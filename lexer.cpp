@@ -251,8 +251,23 @@ Token Lexer::next_token()
     }
     else if (this->current_char == '/')
     {
-        this->read();
-        return Token(OP_DIV, "", this->line_number);
+        if (this->peek() == '/')
+        {
+            // this is a comment!
+            this->read();
+            this->read();
+            while (this->current_char != '\n')
+            {
+                this->read();
+            }
+            this->read();
+            return this->next_token();
+        }
+        else
+        {
+            this->read();
+            return Token(OP_DIV, "", this->line_number);
+        }
     }
     else if (this->current_char == '{')
     {

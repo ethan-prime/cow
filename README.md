@@ -16,8 +16,9 @@ int! n = input
 int! cur_prime_n = 0
 int! cur_num = 2
 
+// loop until we have the nth prime.
 while cur_prime_n < n do {
-    while #is_prime == false do {
+    while #is_prime == false do { // call is_prime to see if cur_num is prime
         cur_num = cur_num + 1
     }
     cur_prime_n = cur_prime_n + 1
@@ -26,11 +27,13 @@ while cur_prime_n < n do {
 
 moo ""
 moo "The nth prime number is:"
-cur_num = cur_num - 1
-moo cur_num
+cur_num = cur_num - 1 // we added an extra 1, we have to subtract
+moo cur_num // MOO result!
 
 
+// FUNCTION DECLARATIONS
 
+// gets ceil(sqrt) of a cur_num
 define get_sqrt -> int {
     int! sqrt = 1
     int! squared = 1
@@ -41,6 +44,7 @@ define get_sqrt -> int {
     -> sqrt
 }
 
+// returns whether cur_num is prime or not.
 define is_prime -> bool {
     bool! res = true
     for int! i = 2; i < #get_sqrt; i = i + 1 do {
