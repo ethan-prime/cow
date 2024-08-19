@@ -1,4 +1,4 @@
-<term> ::= <identifier> | <int_literal> | 'input' | 'random' | <bool> | <real_literal> | <str_literal> | <array_access>
+<term> ::= <identifier> | <int_literal> | 'input' | 'random' | <bool> | <real_literal> | <str_literal> | <array_access> | <function_call>
 <bool> ::= 'true' | 'false'
 <expr> ::= <term> | <term> <arithmetic_op> <term>
 <arithmetic_op> ::= '+' | '-' | '*' | '/' | '**' | '%' | '>>'
@@ -17,4 +17,5 @@
 <argument> ::= <type> <identifier>
 <function_definition> ::= 'define' <identifier> '->' <type> '{' 
     [<statement]* '->' <expr> '}'
+<function_call> ::= '#' <identifier>  
 <program> ::= <statement> [<statement>]*

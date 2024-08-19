@@ -274,6 +274,11 @@ Token Lexer::next_token()
         this->read();
         return Token(CLOSE_BRACKET, "", this->line_number);
     }
+    else if (this->current_char == '#')
+    {
+        this->read();
+        return Token(HASHTAG, "", this->line_number);
+    }
     // add support for == soon !
     else if (this->current_char == '=')
     {

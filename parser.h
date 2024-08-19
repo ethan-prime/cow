@@ -47,6 +47,7 @@ enum term_kind
     TERM_ARRAY_INT_LITERAL,
     TERM_ARRAY_REAL_LITERAL,
     TERM_ARRAY_ACCESS,
+    TERM_FUNCTION_CALL,
 };
 
 enum identifier_type

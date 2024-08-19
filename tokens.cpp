@@ -97,6 +97,8 @@ string Token::repr()
         return "return";
     case DEFINE:
         return "define";
+    case HASHTAG:
+        return "hashtag";
     default:
         return "moo! something went wrong when tokenizing...";
     }

@@ -24,6 +24,7 @@ void Generator::to_asm(bool logging)
     this->collect_all_while_loops();
     this->collect_all_if_thens();
     this->collect_all_for_loops();
+    this->collect_all_functions();
 
     if (!file.is_open())
     {
@@ -94,10 +95,17 @@ void Generator::to_asm(bool logging)
         }
         this->statement_to_asm(stmt);
     }
+
     file << ".exit:" << endl;
     file << "   movq $60, %rax" << endl;
     file << "   xor %rdi, %rdi" << endl;
     file << "   syscall" << endl;
+
+    for (function_def_node func : this->functions)
+    {
+        file << endl;
+        function_declaration_to_asm(func);
+    }
 
     // predefined functions
     file << endl;
@@ -575,6 +583,14 @@ bool Generator::statement_valid(statement_node stmt)
         break;
     case STMT_DECLARATION:
         return this->expr_valid(get<declaration_node>(stmt.statement).expr);
+    case STMT_FUNCTION_DECLARATION:
+        for (auto stmt : get<function_def_node>(stmt.statement).statements)
+        {
+            if (!this->statement_valid(*stmt))
+                return false;
+        }
+        return true;
+        break;
     default:
         cout << "possible error checking if stmt is valid" << endl;
         return false;
@@ -637,6 +653,10 @@ bool Generator::term_valid(term_node term)
     case TERM_ARRAY_ACCESS:
     {
         return this->is_defined(term.value) && expr_valid(*term.index_expr);
+    }
+    case TERM_FUNCTION_CALL:
+    {
+        return true;
     }
     default:
         cout << "possible error checking if term is valid" << endl;
@@ -920,7 +940,102 @@ void Generator::collect_while_loops(while_loop_node while_loop)
                 exit(0);
             }
         }
+        else if (stmt->kind == STMT_FUNCTION_DECLARATION)
+        {
+            cout << "[leather] compilation failure:" << endl
+                 << "   cannot define a new function within a loop." << endl;
+            exit(0);
+        }
     }
+}
+
+void Generator::collect_all_functions()
+{
+    for (auto stmt : this->program.statements)
+    {
+        if (stmt.kind == STMT_FUNCTION_DECLARATION)
+        {
+            this->collect_function(get<function_def_node>(stmt.statement));
+            if (!statement_valid(stmt))
+            {
+                exit(0);
+            }
+        }
+    }
+};
+
+void Generator::collect_function(function_def_node function_def)
+{
+    for (statement_node *stmt : function_def.statements)
+    {
+        if (stmt->kind == STMT_DECLARATION)
+        {
+            declaration_node decl = get<declaration_node>(stmt->statement);
+            if (!this->expr_valid(decl.expr))
+            {
+                // can't compile because file a sem error.
+                exit(0);
+            }
+            // add to our variables vector
+            this->variables.push_back(variable{decl.identifier, decl.type});
+        }
+        else if (stmt->kind == STMT_ARRAY_DECLARATION)
+        {
+            array_declare_node decl = get<array_declare_node>(stmt->statement);
+            if (!this->expr_valid(decl.len_expr))
+            {
+                // can't compile because file a sem error.
+                exit(0);
+            }
+            // add to our variables vector
+            if (is_defined(decl.identifier))
+            {
+                cout << "[leather] compilation failure:" << endl
+                     << "   attempted redeclaration of variable \'" << decl.identifier << "\'" << endl;
+                exit(0);
+            }
+            this->variables.push_back(variable{decl.identifier, decl.type});
+        }
+        else if (stmt->kind == STMT_LABEL)
+        {
+            label_node label = get<label_node>(stmt->statement);
+            // if it's a valid ssignment, make sure we store that
+            // this variable isa now defined.
+            if (!in_vector(this->labels, label.label))
+                this->labels.push_back(label.label);
+        }
+        else if (stmt->kind == STMT_IF_THEN)
+        {
+            this->collect_if_then(get<if_then_node>(stmt->statement)); // follow the nest
+            if (!statement_valid(*stmt))
+            {
+                exit(0);
+            }
+        }
+        else if (stmt->kind == STMT_WHILE_LOOP)
+        {
+            this->collect_while_loops(get<while_loop_node>(stmt->statement)); // follow the nest
+            if (!statement_valid(*stmt))
+            {
+                exit(0);
+            }
+        }
+        else if (stmt->kind == STMT_FOR_LOOP)
+        {
+            this->collect_for_loops(get<for_loop_node>(stmt->statement)); // follow the nest
+            if (!statement_valid(*stmt))
+            {
+                exit(0);
+            }
+        }
+        else if (stmt->kind == STMT_FUNCTION_DECLARATION)
+        {
+            cout << "[leather] compilation failure:" << endl
+                 << "   cannot define a new function within a function definition." << endl;
+            exit(0);
+        }
+    }
+    this->functions.push_back(function_def);
 }
 
 void Generator::collect_for_loops(for_loop_node for_loop)
@@ -1001,6 +1116,12 @@ void Generator::collect_for_loops(for_loop_node for_loop)
             {
                 exit(0);
             }
+        }
+        else if (stmt->kind == STMT_FUNCTION_DECLARATION)
+        {
+            cout << "[leather] compilation failure:" << endl
+                 << "   cannot define a new function within a loop." << endl;
+            exit(0);
         }
     }
 }
@@ -1339,6 +1460,44 @@ identifier_type Generator::term_to_asm(term_node term, identifier_type expected)
             return TYPE_REAL;
         }
     }
+    else if (term.kind == TERM_FUNCTION_CALL)
+    {
+        bool found_func_def = false;
+        identifier_type expected = TYPE_INVALID;
+        for (function_def_node func_def : this->functions)
+        {
+            if (func_def.identifier == term.value)
+            {
+                found_func_def = true;
+                expected = func_def.return_type;
+            }
+        }
+        if (!found_func_def)
+        {
+            cout << "[leather] compilation error:" << endl
+                 << "    function \"" << term.value << "\" not defined." << endl;
+            exit(0);
+        }
+        if (expected == TYPE_INT || expected == TYPE_BOOL || expected == TYPE_STR || expected == TYPE_ARRAY_INT || expected == TYPE_ARRAY_REAL)
+        {
+            file << "   push %rcx" << endl;
+        }
+        else if (expected == TYPE_REAL)
+        {
+            file << "   push %xmm1" << endl;
+        }
+        // call the function!
+        file << "   call FUNCTION_" << term.value << endl;
+        if (expected == TYPE_INT || expected == TYPE_BOOL || expected == TYPE_STR || expected == TYPE_ARRAY_INT || expected == TYPE_ARRAY_REAL)
+        {
+            file << "   pop %rcx" << endl;
+        }
+        else if (expected == TYPE_REAL)
+        {
+            file << "   pop %xmm1" << endl;
+        }
+        return expected;
+    }
     else
     {
         return TYPE_INT;
@@ -1573,4 +1732,20 @@ identifier_type Generator::expected_binary_expr_result(term_binary_node binary_e
         }
     }
     return (binary_expr.lhs.kind == TERM_REAL_LITERAL || binary_expr.rhs.kind == TERM_REAL_LITERAL) ? TYPE_REAL : TYPE_INT;
+}
+
+void Generator::function_declaration_to_asm(function_def_node function_def)
+{
+    file << "FUNCTION_" << function_def.identifier << ":" << endl;
+    for (auto stmt : function_def.statements)
+    {
+        this->statement_to_asm(*stmt);
+    }
+    identifier_type expected = expr_to_asm(function_def.return_expr);
+    if (expected != function_def.return_type)
+    {
+        cout << "[leather] compilation error:" << endl
+             << "    return type of \"" << function_def.identifier << "\" does not match the returned value." << endl;
+    }
+    file << "   ret" << endl;
 }

@@ -22,6 +22,7 @@ private:
     unsigned int buffer_ptr; // 24 bytes buffer to flush text to console
     ofstream file;
     vector<string_> strings_;
+    vector<function_def_node> functions;
 
 public:
     // constructor
@@ -50,6 +51,7 @@ public:
     void for_loop_to_asm(for_loop_node for_loop);
     void declaration_to_asm(declaration_node decl);
     void array_declaration_to_asm(array_declare_node decl);
+    void function_declaration_to_asm(function_def_node function_def);
 
     // HELPERS
 
@@ -61,9 +63,11 @@ public:
     void collect_all_while_loops();
     void collect_all_for_loops();
     void collect_all_if_thens();
+    void collect_all_functions();
     void collect_if_then(if_then_node if_then);
     void collect_while_loops(while_loop_node while_loop);
     void collect_for_loops(for_loop_node for_loop);
+    void collect_function(function_def_node function_def);
 
     void update_buffer_ptr();
 

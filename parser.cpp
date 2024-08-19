@@ -426,6 +426,19 @@ term_node Parser::parse_term()
             term.value = this->current_token().value;
         }
     }
+    else if (this->current_token().kind == HASHTAG)
+    {
+        term.kind = TERM_FUNCTION_CALL;
+        this->advance();
+        if (this->current_token().kind == IDENTIFIER)
+        {
+            term.value = this->current_token().value;
+        }
+        else
+        {
+            error("function identifier");
+        }
+    }
     else
     {
         error("term");
@@ -950,6 +963,10 @@ void print_term(term_node term)
     {
         cout << "RANDOM";
     }
+    else if (term.kind == TERM_FUNCTION_CALL)
+    {
+        cout << "CALL " << term.value;
+    }
     else
     {
         cout << term.value;
@@ -1194,13 +1211,13 @@ void print_function_declaration(function_def_node function_def)
     switch (function_def.return_type)
     {
     case TYPE_INT:
-        cout << " int ";
+        cout << "int ";
         break;
     case TYPE_REAL:
-        cout << " real ";
+        cout << "real ";
         break;
     default:
-        cout << " ???? ";
+        cout << "???? ";
         break;
     }
     cout << "as {" << endl;

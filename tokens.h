@@ -51,6 +51,7 @@ enum token_type
     CLOSE_BRACE,
     RETURN, // ->
     DEFINE,
+    HASHTAG,
 };
 
 class Token
