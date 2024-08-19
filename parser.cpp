@@ -624,7 +624,7 @@ statement_node Parser::parse_declaration()
     }
     else if (this->current_token().kind == KEYW_BOOL)
     {
-        decl.type = TYPE_BOOL;
+        decl.type = TYPE_INT;
         this->advance();
     }
     else if (this->current_token().kind == KEYW_STR)

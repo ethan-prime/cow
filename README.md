@@ -3,11 +3,198 @@
 ## Still in development...
 ### Compiles .milk files into AT&T syntax x86-64 Assembly code which can be executed on Linux machines.
 
-# Example: 
+# Examples: 
+```
+prime.milk: retrieves the nth prime number (given by user input)
+```
+```c
+moo "Hello welcome to the prime number generating program!"
+moo "Please enter the nth prime number that you want:"
+
+int! n = input
+
+int! cur_prime_n = 0
+int! cur_num = 2
+
+while cur_prime_n < n do {
+    while #is_prime == false do {
+        cur_num = cur_num + 1
+    }
+    cur_prime_n = cur_prime_n + 1
+    cur_num = cur_num + 1
+}
+
+moo ""
+moo "The nth prime number is:"
+cur_num = cur_num - 1
+moo cur_num
+
+
+
+define get_sqrt -> int {
+    int! sqrt = 1
+    int! squared = 1
+    while ! squared > cur_num do {
+        sqrt = sqrt + 1
+        squared = sqrt ** 2
+    }
+    -> sqrt
+}
+
+define is_prime -> bool {
+    bool! res = true
+    for int! i = 2; i < #get_sqrt; i = i + 1 do {
+        if i == cur_num then {
+            break
+        }
+        int! remainder = cur_num % i
+        if remainder == 0 then {
+            res = false
+        }
+    }
+    -> res
+}
+```
+```
+$ ./leather prime.milk
+[leather] successfully compiled:
+    prime.milk -> prime.s
+```
+```
+$ gcc -c -g prime.s -o prime.o
+$ ld prime.o -o prime
+$ ./prime
+```
+```
+Hello welcome to the prime-number geneting program!
+Please enter the nth prime number that you want:
+10000
+
+The nth prime number is:
+104729
+```
+
+```
+rps.milk: play rock paper scissors against the computer! (rng)
+```
+```c
+print "Hello. Welcome to Rock, Paper, Scissors!"
+
+int! choice
+int! computer_choice
+
+while choice != 4 do {
+    print " - 1 for Rock"
+    print " - 2 for Paper"
+    print " - 3 for Scissors"
+    print " - 4 to exit"
+    
+    choice = input
+
+    if choice == 4 then {
+        break
+    }
+
+    computer_choice = random % 3
+    computer_choice = computer_choice + 1
+    
+    if computer_choice == 1 then {
+        print "The computer chooses Rock"
+    }
+    if computer_choice == 2 then {
+        print "The computer chooses Paper"
+    }
+    if computer_choice == 3 then {
+        print "The computer chooses Scissors"
+    }
+
+    if choice == 1 then {
+        if computer_choice == 1 then {
+            print "You tie."
+        }
+        if computer_choice == 2 then {
+            print "You lose!"
+        }
+        if computer_choice == 3 then {
+            print "You win!"
+        }
+    }
+
+    if choice == 2 then {
+        if computer_choice == 1 then {
+            print "You win!"
+        }
+        if computer_choice == 2 then {
+            print "You tie."
+        }
+        if computer_choice == 3 then {
+            print "You lose!"
+        }
+    }
+
+    if choice == 3 then {
+        if computer_choice == 1 then {
+            print "You lose!"
+        }
+        if computer_choice == 2 then {
+            print "You win!"
+        }
+        if computer_choice == 3 then {
+            print "You tie."
+        }
+    }
+}
+```
+```
+$ ./leather rps.milk
+[leather] successfully compiled:
+    rps.milk -> rps.s
+```
+```
+$ gcc -c -g rps.s -o rps.o
+$ ld rps.o -o rps
+$ ./rps
+```
+```
+Hello. Welcome to Rock, Paper, Scissors!
+ - 1 for Rock
+ - 2 for Paper
+ - 3 for Scissors
+ - 4 to exit
+1
+The computer chooses Paper
+You lose!
+ - 1 for Rock
+ - 2 for Paper
+ - 3 for Scissors
+ - 4 to exit
+1
+The computer chooses Scissors
+You win!
+ - 1 for Rock
+ - 2 for Paper
+ - 3 for Scissors
+ - 4 to exit
+2
+The computer chooses Scissors
+You lose!
+ - 1 for Rock
+ - 2 for Paper
+ - 3 for Scissors
+ - 4 to exit
+3
+The computer chooses Rock
+You lose!
+ - 1 for Rock
+ - 2 for Paper
+ - 3 for Scissors
+ - 4 to exit
+4
+```
+
 ```
 fib.milk: computes the first n fibonacci numbers
 ```
-
 ```c
 int! n = input
 
@@ -24,244 +211,17 @@ for int! j = 0; j < n; j = j + 1 do {
     moo fib[j]
 }
 ```
-
 ```
-$ ./leather sqrt_newtons_method.milk
+$ ./leather fib.milk
 [leather] successfully compiled:
-    sqrt_newtons_method.milk -> sqrt_newtons_method.s
+    fib.milk -> fib.s
 ```
-
-```assembly
-.section .text
-.globl _start
-_start:
-   mov %rsp, %rbp
-   sub $48, %rsp
-   sub $128, %rsp
-   mov %rbp, %rsi
-   addq $48, %rsi
-   movq $0, %rax
-   movq $0, %rdi
-   movq $64, %rdx
-   syscall
-   mov %rax, %rcx
-   subq $1, %rcx
-   mov %rsi, %r9
-   addq %rcx, %r9
-   subq $1, %r9
-   movq $1, %rbx
-   xor %r8, %r8
-   call ascii_to_int
-   movq %rax, -8(%rbp)
-   movq -8(%rbp), %rdi
-   xor %r12, %r12
-   lea (%r12, %rdi, 8), %rdi
-   call heapalloc
-   movq %rax, -16(%rbp)
-   movq $1, %rax
-   movq -16(%rbp), %rdx
-   movq $0, %rbx
-   movq %rax, (%rdx, %rbx, 8)
-   movq $1, %rax
-   movq -16(%rbp), %rdx
-   movq $1, %rbx
-   movq %rax, (%rdx, %rbx, 8)
-   movq $2, %rax
-   movq %rax, -24(%rbp)
-.STARTLOOP0:
-   movq -24(%rbp), %rax
-   mov %rax, %rcx
-   movq -8(%rbp), %rax
-   cmpq %rax, %rcx
-   setl %al
-   movzbq %al, %rax
-   test %rax, %rax
-   jz .ENDLOOP0
-   movq $1, %rax
-   mov %rax, %rcx
-   movq -24(%rbp), %rax
-   subq %rcx, %rax
-   movq %rax, -32(%rbp)
-   movq $2, %rax
-   mov %rax, %rcx
-   movq -24(%rbp), %rax
-   subq %rcx, %rax
-   movq %rax, -40(%rbp)
-   movq -16(%rbp), %rdx
-   movq -32(%rbp), %rbx
-   movq (%rdx, %rbx, 8), %rax
-   mov %rax, %rcx
-   movq -16(%rbp), %rdx
-   movq -40(%rbp), %rbx
-   movq (%rdx, %rbx, 8), %rax
-   addq %rcx, %rax
-   movq -16(%rbp), %rdx
-   movq -24(%rbp), %rbx
-   movq %rax, (%rdx, %rbx, 8)
-   movq -24(%rbp), %rax
-   mov %rax, %rcx
-   movq $1, %rax
-   addq %rcx, %rax
-   movq %rax, -24(%rbp)
-   jmp .STARTLOOP0
-.ENDLOOP0:
-   movq $0, %rax
-   movq %rax, -48(%rbp)
-.STARTLOOP1:
-   movq -48(%rbp), %rax
-   mov %rax, %rcx
-   movq -8(%rbp), %rax
-   cmpq %rax, %rcx
-   setl %al
-   movzbq %al, %rax
-   test %rax, %rax
-   jz .ENDLOOP1
-   movq -16(%rbp), %rdx
-   movq -48(%rbp), %rbx
-   movq (%rdx, %rbx, 8), %rax
-   movq $1, %rsi
-   mov %rbp, %rcx
-   addq $111, %rcx
-   movq $0x0A, (%rcx)
-   dec %rcx
-   call int_to_ascii
-   movq $1, %rax
-   movq $1, %rdi
-   syscall
-   movq -48(%rbp), %rax
-   mov %rax, %rcx
-   movq $1, %rax
-   addq %rcx, %rax
-   movq %rax, -48(%rbp)
-   jmp .STARTLOOP1
-.ENDLOOP1:
-.exit:
-   movq $60, %rax
-   xor %rdi, %rdi
-   syscall
-
-int_to_ascii:
-   xor %r10, %r10
-   test %rax, %rax
-   jns .convert_positive
-   movq $1, %r10
-   neg %rax
-.convert_positive:
-   movq $10, %rbx
-   xor %rdx, %rdx
-   div %rbx
-   add $48, %dl
-   movb %dl, (%rcx)
-   inc %rsi
-   dec %rcx
-   test %rax, %rax
-   jnz .convert_positive
-   test %r10, %r10
-   jz .end_itoa
-   movb $'-', (%rcx)
-   dec %rcx
-   inc %rsi
-.end_itoa:
-   inc %rcx
-   mov %rsi, %rdx
-   mov %rcx, %rsi
-   ret
-
-ascii_to_int:
-   movb (%r9), %al
-   movzbq %al, %rax
-   sub $48, %rax
-   mul %rbx
-   add %rax, %r8
-   mov %rbx, %rax
-   mov $10, %rbx
-   mul %rbx
-   mov %rax, %rbx
-   dec %rcx
-   dec %r9
-   test %rcx, %rcx
-   jnz ascii_to_int
-   inc %r9
-   mov %r8, %rax
-   ret
-
-exp:
-   test %rbx, %rbx
-   jz .endexp
-   mul %rcx
-   dec %rbx
-   jmp exp
-.endexp:
-   ret
-
-double_to_ascii:
-   xor %r12, %r12
-   cvttsd2si %xmm0, %r9
-   test %r9, %r9
-   jns .convert_positive_dta
-   movq $1, %r12
-   movabs $0x8000000000000000, %rax
-   movq %rax, %xmm2
-   xorpd %xmm2, %xmm0
-   cvttsd2si %xmm0, %r9
-.convert_positive_dta:
-   movq $10000000000, %rax
-   cvtsi2sd %rax, %xmm1
-   mulsd %xmm1, %xmm0
-   cvttsd2si %xmm0, %rax
-   movq $10000000000, %r8
-   xor %rdx, %rdx
-   div %r8
-   mov %rdx, %rax
-.double_to_ascii_loop:
-   mov %rax, %rbx
-   test %rax, %rax
-   jz .double_to_ascii_loop_end
-   xor %rdx, %rdx
-   movq $10, %r8
-   div %r8
-   test %rdx, %rdx
-   jz .double_to_ascii_loop
-.double_to_ascii_loop_end:
-   mov %rbx, %rax
-   call int_to_ascii
-   mov %rsi, %rcx
-   mov %rdx, %rsi
-   dec %rcx
-   movb $46, (%rcx)
-   inc %rsi
-   dec %rcx
-   mov %r9, %rax
-   call int_to_ascii
-   test %r12, %r12
-   jz .end_dtoa
-   dec %rsi
-   movb $'-', (%rsi)
-   inc %rdx
-.end_dtoa:
-   ret
-
-heapalloc:
-   mov %rdi, %rsi
-   movq $0, %rdi
-   movq $0x3, %rdx
-   movq $0x22, %r10
-   movq $-1, %r8
-   xor %r9, %r9
-   movq $9, %rax
-   syscall
-   ret
-
-```
-
 ```
 $ gcc -c -g fib.s -o fib.o
 $ ld fib.o -o fib
 $ ./fib
 ```
-
 ```
-stdout:
 20
 1
 1
