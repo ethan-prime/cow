@@ -69,6 +69,19 @@ public:
     void collect_for_loops(for_loop_node for_loop);
     void collect_function(function_def_node function_def);
 
+    // FOR GENERATING FUNCTION CODE
+    void func_to_asm(function_def_node function_def);
+    identifier_type func_call_to_asm(term_node term);
+    vector<variable> collect_local_variables(function_def_node function_def);
+
+    void func_collect_for_loop(vector<variable> &local_variables, for_loop_node for_loop);
+    void func_collect_while_loop(vector<variable> &local_variables, while_loop_node while_loop);
+    void func_collect_if_then(vector<variable> &local_variables, if_then_node if_then);
+    void func_collect_arguments(vector<variable> &local_variables, vector<function_arg> arguments);
+
+    bool local_expr_valid(vector<variable> local_variables, expr_node expr);
+    bool local_term_valid(vector<variable> local_variables, term_node term);
+
     void update_buffer_ptr();
 
     bool statement_valid(statement_node stmt);

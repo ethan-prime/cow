@@ -12,10 +12,9 @@
 <if_then> ::= 'if' <comparison> 'then' '{' [<statement>]* '}'
 <while_loop> ::= 'while' <comparison> 'do' '{' [<statement>]* '}'
 <for_loop> ::= 'for' <declaration> ',' <comparison> ',' <assignment> 'do' '{' [<statement>]* '}' 
-<statement> ::= <assignment> | 'goto' <label> | 'print' ('moo') <term> | <label> | <while_loop> | <if_then> | 'break'
-<label> ::= ':' <str_literal>
+<statement> ::= <assignment> | 'print' ('moo') <term> | <label> | <while_loop> | <if_then> | 'break' | <function_definition>
 <argument> ::= <type> <identifier>
-<function_definition> ::= 'define' <identifier> '->' <type> '{' 
+<function_definition> ::= 'define' <identifier> [':' <argument>*] '->' <type> '{' 
     [<statement]* '->' <expr> '}'
-<function_call> ::= '#' <identifier>  
+<function_call> ::= '#' <identifier> '(' [<expr>]* ')' 
 <program> ::= <statement> [<statement>]*

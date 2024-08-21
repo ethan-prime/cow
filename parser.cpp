@@ -428,16 +428,7 @@ term_node Parser::parse_term()
     }
     else if (this->current_token().kind == HASHTAG)
     {
-        term.kind = TERM_FUNCTION_CALL;
-        this->advance();
-        if (this->current_token().kind == IDENTIFIER)
-        {
-            term.value = this->current_token().value;
-        }
-        else
-        {
-            error("function identifier");
-        }
+        return this->parse_function_call();
     }
     else
     {
@@ -445,7 +436,60 @@ term_node Parser::parse_term()
     }
     this->advance();
     return term;
-};
+}
+
+// <function_call> ::= '#' <identifier> '(' [<expr>]* ')'
+term_node Parser::parse_function_call()
+{
+    term_node term;
+    vector<expr_node *> args;
+    string identifier;
+    if (this->current_token().kind == HASHTAG)
+    {
+        this->advance();
+    }
+    else
+    {
+        error("#");
+    }
+    if (this->current_token().kind == IDENTIFIER)
+    {
+        identifier = this->current_token().value;
+        this->advance();
+    }
+    else
+    {
+        error("function identifier");
+    }
+    if (this->current_token().kind == OPEN_PAREN)
+    {
+        this->advance();
+    }
+    else
+    {
+        error("(");
+    }
+    while (this->current_token().kind != CLOSE_PAREN)
+    {
+        args.push_back(new expr_node(this->parse_expr()));
+        if (this->current_token().kind == COMMA)
+        {
+            this->advance(); // readability separate w/ comma
+        }
+    }
+    if (this->current_token().kind == CLOSE_PAREN)
+    {
+        this->advance();
+    }
+    else
+    {
+        error(")");
+    }
+    term.value = identifier;
+    term.call_args = args;
+    term.kind = TERM_FUNCTION_CALL;
+    return term;
+}
 
 // 'if' <comparison> 'then' <statement>
 statement_node Parser::parse_if_then()
@@ -786,6 +830,7 @@ statement_node Parser::parse_function_declaration()
     string identifier;
     identifier_type type;
     vector<statement_node *> stmts;
+    vector<function_arg> args;
     expr_node ret;
 
     if (this->current_token().kind == DEFINE)
@@ -805,6 +850,100 @@ statement_node Parser::parse_function_declaration()
     {
         error("function identifier");
     }
+    if (this->current_token().kind == COLON)
+    {
+        // we have arguments we need to parse
+        this->advance();
+        while (this->current_token().kind != RETURN)
+        {
+            identifier_type arg_type;
+            string identifier;
+            // parse an argument, add it to vector.
+            switch (this->current_token().kind)
+            {
+            case KEYW_INT:
+                if (this->peek().kind == PERIOD)
+                {
+                    this->advance();
+                    this->advance();
+                    if (this->current_token().kind == PERIOD)
+                    {
+                        this->advance();
+                        if (this->current_token().kind == PERIOD)
+                        {
+                            arg_type = TYPE_ARRAY_INT;
+                        }
+                        else
+                        {
+                            error("...");
+                        }
+                    }
+                    else
+                    {
+                        error("...");
+                    }
+                }
+                else
+                {
+                    arg_type = TYPE_INT;
+                }
+                break;
+            case KEYW_BOOL:
+                arg_type = TYPE_INT;
+                break;
+            case KEYW_REAL:
+                if (this->peek().kind == PERIOD)
+                {
+                    this->advance();
+                    this->advance();
+                    if (this->current_token().kind == PERIOD)
+                    {
+                        this->advance();
+                        if (this->current_token().kind == PERIOD)
+                        {
+                            arg_type = TYPE_ARRAY_REAL;
+                        }
+                        else
+                        {
+                            error("...");
+                        }
+                    }
+                    else
+                    {
+                        error("...");
+                    }
+                }
+                else
+                {
+                    arg_type = TYPE_REAL;
+                }
+                break;
+            default:
+                error("invalid argument type");
+            }
+            this->advance();
+            if (this->current_token().kind == NOT)
+            {
+                this->advance();
+            }
+            if (this->current_token().kind == IDENTIFIER)
+            {
+                identifier = this->current_token().value;
+            }
+            else
+            {
+                error("argument identifier");
+            }
+            // add to arguments vector
+            args.push_back(function_arg{identifier, arg_type});
+            this->advance();
+            if (this->current_token().kind == COMMA)
+            {
+                // optional, used for readability
+                this->advance();
+            }
+        }
+    }
     if (this->current_token().kind == RETURN)
     {
         this->advance();
@@ -818,13 +957,61 @@ statement_node Parser::parse_function_declaration()
         switch (this->current_token().kind)
         {
         case KEYW_INT:
-            type = TYPE_INT;
+            if (this->peek().kind == PERIOD)
+            {
+                this->advance();
+                this->advance();
+                if (this->current_token().kind == PERIOD)
+                {
+                    this->advance();
+                    if (this->current_token().kind == PERIOD)
+                    {
+                        type = TYPE_ARRAY_INT;
+                    }
+                    else
+                    {
+                        error("...");
+                    }
+                }
+                else
+                {
+                    error("...");
+                }
+            }
+            else
+            {
+                type = TYPE_INT;
+            }
             break;
         case KEYW_BOOL:
             type = TYPE_INT;
             break;
         case KEYW_REAL:
-            type = TYPE_REAL;
+            if (this->peek().kind == PERIOD)
+            {
+                this->advance();
+                this->advance();
+                if (this->current_token().kind == PERIOD)
+                {
+                    this->advance();
+                    if (this->current_token().kind == PERIOD)
+                    {
+                        type = TYPE_ARRAY_REAL;
+                    }
+                    else
+                    {
+                        error("...");
+                    }
+                }
+                else
+                {
+                    error("...");
+                }
+            }
+            else
+            {
+                type = TYPE_REAL;
+            }
             break;
         default:
             error("invalid return type");
@@ -834,6 +1021,10 @@ statement_node Parser::parse_function_declaration()
     else
     {
         error("return type");
+    }
+    if (this->current_token().kind == NOT)
+    {
+        this->advance();
     }
     if (this->current_token().kind == OPEN_BRACKET)
     {
@@ -867,7 +1058,7 @@ statement_node Parser::parse_function_declaration()
 
     statement_node stmt;
     stmt.kind = STMT_FUNCTION_DECLARATION;
-    stmt.statement = function_def_node{identifier, stmts, type, ret};
+    stmt.statement = function_def_node{identifier, stmts, args, type, ret};
 
     return stmt;
 }
@@ -965,7 +1156,7 @@ void print_term(term_node term)
     }
     else if (term.kind == TERM_FUNCTION_CALL)
     {
-        cout << "CALL " << term.value;
+        print_function_call(term);
     }
     else
     {
@@ -1054,6 +1245,22 @@ void print_expr(expr_node expr)
         cout << "error printing prgm" << endl;
     }
 };
+
+void print_function_call(term_node term)
+{
+    cout << "CALL " << term.value << " with (";
+    unsigned int i = 1;
+    for (expr_node *expr : term.call_args)
+    {
+        print_expr(*expr);
+        if (i < term.call_args.size())
+        {
+            cout << ", ";
+            i++;
+        }
+    }
+    cout << ")";
+}
 
 void print_goto(goto_node goto_)
 {
@@ -1207,7 +1414,40 @@ void print_for_loop(for_loop_node for_loop)
 
 void print_function_declaration(function_def_node function_def)
 {
-    cout << "DEFINE function " << function_def.identifier << " -> ";
+    cout << "DEFINE function " << function_def.identifier;
+    if (function_def.arguments.size() > 0)
+    {
+        cout << ": ";
+        unsigned int i = 1;
+        for (function_arg arg : function_def.arguments)
+        {
+            switch (arg.type)
+            {
+            case TYPE_INT:
+                cout << "int ";
+                break;
+            case TYPE_REAL:
+                cout << "real ";
+                break;
+            case TYPE_ARRAY_INT:
+                cout << "array<int> ";
+                break;
+            case TYPE_ARRAY_REAL:
+                cout << "array<real> ";
+                break;
+            default:
+                cout << "???? ";
+                break;
+            }
+            cout << arg.identifier;
+            if (i < function_def.arguments.size())
+            {
+                cout << ", ";
+                i++;
+            }
+        }
+    }
+    cout << " -> ";
     switch (function_def.return_type)
     {
     case TYPE_INT:
@@ -1215,6 +1455,12 @@ void print_function_declaration(function_def_node function_def)
         break;
     case TYPE_REAL:
         cout << "real ";
+        break;
+    case TYPE_ARRAY_INT:
+        cout << "array<int> ";
+        break;
+    case TYPE_ARRAY_REAL:
+        cout << "array<real> ";
         break;
     default:
         cout << "???? ";
@@ -1226,7 +1472,7 @@ void print_function_declaration(function_def_node function_def)
         cout << "       ";
         print_statement(*stmt);
     }
-    cout << "       -> ";
+    cout << "       RETURN ";
     print_expr(function_def.return_expr);
     cout << endl
          << "   }" << endl;

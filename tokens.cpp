@@ -99,6 +99,12 @@ string Token::repr()
         return "define";
     case HASHTAG:
         return "hashtag";
+    case COLON:
+        return "colon";
+    case OPEN_PAREN:
+        return "open_paren";
+    case CLOSE_PAREN:
+        return "close_paren";
     default:
         return "moo! something went wrong when tokenizing...";
     }

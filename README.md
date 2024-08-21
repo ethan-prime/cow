@@ -5,6 +5,43 @@
 
 # Examples: 
 ```
+fib.milk: gets the nth fibonacci number from input
+```
+```c
+// get user input
+print "Nth fibonacci number (0-indexed lol):"
+int! num = input
+
+// call fib function and MOO result!
+moo #fib(num)
+
+define fib: int! n -> int! {
+    // base case
+    int! ret = 1
+    if n > 0 then { 
+        // recursive case
+        ret = #fib(n - 1) + #fib(n - 1)
+    }
+    // return result
+    -> ret
+}
+```
+```
+$ ./leather fib.milk
+[leather] successfully compiled:
+    fib.milk -> fib.s
+```
+```
+$ gcc -c -g fib.s -o fib.o
+$ ld fib.o -o fib
+$ ./fib
+```
+```
+20
+10946
+```
+
+```
 prime.milk: retrieves the nth prime number (given by user input)
 ```
 ```c
@@ -194,57 +231,4 @@ You lose!
  - 3 for Scissors
  - 4 to exit
 4
-```
-
-```
-fib.milk: computes the first n fibonacci numbers
-```
-```c
-int! n = input
-
-int... fib[n]
-
-fib[0] = 1
-fib[1] = 1
-
-for int! i = 2; i < n; i = i + 1 do {
-    fib[i] = fib[i - 1] + fib[i - 2]
-}
-
-for int! j = 0; j < n; j = j + 1 do {
-    moo fib[j]
-}
-```
-```
-$ ./leather fib.milk
-[leather] successfully compiled:
-    fib.milk -> fib.s
-```
-```
-$ gcc -c -g fib.s -o fib.o
-$ ld fib.o -o fib
-$ ./fib
-```
-```
-20
-1
-1
-2
-3
-5
-8
-13
-21
-34
-55
-89
-144
-233
-377
-610
-987
-1597
-2584
-4181
-6765
 ```

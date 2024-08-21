@@ -52,6 +52,9 @@ enum token_type
     RETURN, // ->
     DEFINE,
     HASHTAG,
+    COLON,
+    OPEN_PAREN,
+    CLOSE_PAREN,
 };
 
 class Token

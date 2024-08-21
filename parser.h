@@ -73,6 +73,7 @@ struct term_node
     term_kind kind;
     string value;          // may need union for this later, rn we are just storing identifiers and ints.
     expr_node *index_expr; // optional, needed for TERM_ARRAY_ACCESS
+    vector<expr_node *> call_args;
 };
 
 struct term_binary_node
@@ -143,11 +144,18 @@ struct if_then_node
     vector<statement_node *> statements;
 };
 
+struct function_arg
+{
+    string identifier;
+    identifier_type type;
+};
+
 struct function_def_node
 {
     // add args later?
     string identifier;
     vector<statement_node *> statements;
+    vector<function_arg> arguments;
     identifier_type return_type;
     expr_node return_expr;
 };
@@ -236,6 +244,7 @@ public:
     expr_node parse_expr();
 
     term_node parse_term();
+    term_node parse_function_call();
 
     comparison_node parse_comparison();
 };
@@ -254,4 +263,5 @@ void print_for_loop(for_loop_node for_loop);
 void print_array_declare(array_declare_node decl);
 void print_array_assign(array_assign_node assign);
 void print_term(term_node term);
+void print_function_call(term_node term);
 void print_function_declaration(function_def_node function_def);

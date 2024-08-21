@@ -249,6 +249,16 @@ Token Lexer::next_token()
         this->read();
         return Token(SEMICOLON, "", this->line_number);
     }
+    else if (this->current_char == '(')
+    {
+        this->read();
+        return Token(OPEN_PAREN, "", this->line_number);
+    }
+    else if (this->current_char == ')')
+    {
+        this->read();
+        return Token(CLOSE_PAREN, "", this->line_number);
+    }
     else if (this->current_char == '/')
     {
         if (this->peek() == '/')
@@ -321,17 +331,8 @@ Token Lexer::next_token()
     // label !?
     else if (this->current_char == ':')
     {
-        string buf = "";
-        this->read(); // advance from :
-
-        // get label name
-        while (isalnum(this->current_char) || this->current_char == '_')
-        {
-            buf.push_back(this->current_char);
-            this->read();
-        }
-
-        return Token(LABEL, buf, this->line_number);
+        this->read();
+        return Token(COLON, "", this->line_number);
     }
     // int or real
     else if (isdigit(this->current_char) || this->current_char == '.')
