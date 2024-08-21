@@ -37,6 +37,7 @@ $ ld fib.o -o fib
 $ ./fib
 ```
 ```
+Nth fibonacci number (0-indexed lol):
 20
 10946
 ```
