@@ -9,7 +9,7 @@ fib.milk: gets the nth fibonacci number from input
 ```
 ```c
 // get user input
-print "Nth fibonacci number (0-indexed lol):"
+moo "Nth fibonacci number (0-indexed lol):"
 int! num = input
 
 // call fib function and MOO result!
