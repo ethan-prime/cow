@@ -25,6 +25,7 @@ void Generator::to_asm(bool logging)
     this->collect_all_while_loops();
     this->collect_all_if_thens();
     this->collect_all_for_loops();
+    this->load_stdlib();
     this->collect_all_functions();
 
     if (!file.is_open())
@@ -364,7 +365,7 @@ void Generator::assign_to_asm(assign_node assign)
     identifier_type t = this->variables[index].type;
 
     identifier_type expected = expr_to_asm(assign.expr);
-    if (t != expected)
+    if (t != expected && expected != TYPE_VOID)
     {
         cout << "[leather] compilation error:" << endl
              << "    " << "type mistmatch between expected expression when assigning variable \'" << assign.identifier << "\'" << endl;
@@ -404,7 +405,7 @@ void Generator::array_assign_to_asm(array_assign_node assign)
     // WE NEED TO SAVE THE VALUE IN %rax! we are storing it in memory...
     file << "   push %rax" << endl;
 
-    if (!((array_type == TYPE_ARRAY_INT && expected == TYPE_INT) || (array_type == TYPE_ARRAY_REAL && expected == TYPE_REAL)))
+    if (!((array_type == TYPE_ARRAY_INT && expected == TYPE_INT) || (array_type == TYPE_ARRAY_REAL && expected == TYPE_REAL) || (expected == TYPE_VOID)))
     {
         cout << "[leather] compilation error:" << endl
              << "    " << "type mistmatch between expected expression when assign array variable \'" << identifier << "\' at index ";
@@ -460,7 +461,7 @@ void Generator::declaration_to_asm(declaration_node decl)
     int index = this->variable_index(decl.identifier);
 
     identifier_type expected = expr_to_asm(decl.expr);
-    if (decl.type != expected)
+    if (decl.type != expected && expected != TYPE_VOID)
     {
         cout << "[leather] compilation error:" << endl
              << "    " << "type mismatch between expected expression when declaring variable \'" << decl.identifier << "\'" << endl;
@@ -483,26 +484,29 @@ void Generator::declaration_to_asm(declaration_node decl)
                  << "    attemped binary expression with string" << endl;
             exit(0);
         }
-        int strlen = get<term_node>(decl.expr.expr).value.size();
-        file << "   movq $" << strlen + 1 << ", %rdi" << endl; // + 1 for \0
-        // allocate and store ptr of array!
-        file << "   xor %r12, %r12" << endl;
-        file << "   call heapalloc" << endl;
-        // save ptr at address
-        file << "   movq %rax, -" << index * 8 + 8 << "(%rbp)" << endl;
-        // TODO!
-        // setup for strcpy
-        int string_index = this->string_index(get<term_node>(decl.expr.expr).value);
-        if (string_index == -1)
+        if (get<term_node>(decl.expr.expr).kind != TERM_FUNCTION_CALL)
         {
-            cout << "[leather] compilation error:" << endl
-                 << "    " << "unknown string \"" << get<term_node>(decl.expr.expr).value << "\"" << endl;
-            exit(0);
+            int strlen = get<term_node>(decl.expr.expr).value.size();
+            file << "   movq $" << strlen + 1 << ", %rdi" << endl; // + 1 for \0
+            // allocate and store ptr of array!
+            file << "   xor %r12, %r12" << endl;
+            file << "   call heapalloc" << endl;
+            // save ptr at address
+            file << "   movq %rax, -" << index * 8 + 8 << "(%rbp)" << endl;
+            // TODO!
+            // setup for strcpy
+            int string_index = this->string_index(get<term_node>(decl.expr.expr).value);
+            if (string_index == -1)
+            {
+                cout << "[leather] compilation error:" << endl
+                     << "    " << "unknown string \"" << get<term_node>(decl.expr.expr).value << "\"" << endl;
+                exit(0);
+            }
+            file << "   lea str" << string_index << "(%rip), %rdi" << endl;
+            file << "   mov %rax, %rsi" << endl;
+            file << "   movq $" << strlen << ", %rdx" << endl;
+            file << "   call strcpy" << endl;
         }
-        file << "   lea str" << string_index << "(%rip), %rdi" << endl;
-        file << "   mov %rax, %rsi" << endl;
-        file << "   movq $" << strlen << ", %rdx" << endl;
-        file << "   call strcpy" << endl;
     }
 }
 
@@ -1261,7 +1265,7 @@ void Generator::input_to_asm(term_node term)
 {
     // we need to allocate space for the input
     file << "   mov %rbp, %rsi" << endl;
-    file << "   addq $" << this->buffer_ptr << ", %rsi" << endl;
+    file << "   subq $" << this->buffer_ptr << ", %rsi" << endl;
     file << "   movq $0, %rax" << endl;
     file << "   movq $0, %rdi" << endl;
     file << "   movq $64, %rdx" << endl;
@@ -1285,7 +1289,7 @@ void Generator::random_to_asm()
 {
     // get ptr to free memory in %rdi
     file << "   mov %rbp, %rdi" << endl;
-    file << "   addq $" << this->buffer_ptr << ", %rdi" << endl;
+    file << "   subq $" << this->buffer_ptr << ", %rdi" << endl;
     file << "   push %rcx" << endl;
     file << "   call get_rand" << endl;
     file << "   pop %rcx" << endl;
@@ -1422,6 +1426,7 @@ identifier_type Generator::func_call_to_asm(term_node term)
 
     vector<function_arg> function_args;
     bool found_func_def = false;
+    bool found_std_def = false;
     identifier_type expected_return = TYPE_INVALID;
     for (function_def_node func_def : this->functions)
     {
@@ -1432,7 +1437,16 @@ identifier_type Generator::func_call_to_asm(term_node term)
             expected_return = func_def.return_type;
         }
     }
-    if (!found_func_def)
+    for (function_def_node func_def : this->std_functions)
+    {
+        if (func_def.identifier == term.value)
+        {
+            found_std_def = true;
+            function_args = func_def.arguments;
+            expected_return = func_def.return_type;
+        }
+    }
+    if (!found_func_def && !found_std_def)
     {
         cout << "[leather] compilation error:" << endl
              << "    function \"" << term.value << "\" not defined." << endl;
@@ -1506,7 +1520,14 @@ identifier_type Generator::func_call_to_asm(term_node term)
     file << "   push %rcx" << endl;
 
     // STEP 3
-    file << "   call FUNCTION_" << term.value << endl;
+    if (found_std_def)
+    {
+        file << "   call " << term.value << endl;
+    }
+    else
+    {
+        file << "   call FUNCTION_" << term.value << endl;
+    }
 
     // STEP 4
     file << "   pop %rcx" << endl;
@@ -1786,6 +1807,8 @@ void Generator::func_to_asm(function_def_node function_def)
     // assume only function arguments are declared at beginning of function body.
     // this->variables = vector<variable>(local_variables.begin(), local_variables.begin() + function_def.arguments.size());
     this->variables = local_variables;
+    this->update_buffer_ptr();
+    file << "   subq $128, %rsp" << endl;
 
     map<unsigned int, string> int_idx_to_register;
     int_idx_to_register[0] = "%rdi";
@@ -1848,10 +1871,12 @@ void Generator::func_to_asm(function_def_node function_def)
     // STEP 8
     file << ".END_FUNCTION_" << function_def.identifier << ":" << endl; // we need to be able to jump here for early returns
     file << "   addq $" << local_variables.size() * 8 << ", %rsp" << endl;
+    file << "   addq $128, %rsp" << endl;
 
     // STEP 9
     file << "   pop %rbx" << endl
          << "   pop %rbp" << endl;
+    this->update_buffer_ptr();
 
     // STEP 10
     file << "   ret" << endl;
@@ -2228,4 +2253,21 @@ void Generator::func_collect_if_then(vector<variable> &local_variables, if_then_
             }
         }
     }
+}
+
+void Generator::load_stdlib()
+{
+    // get_rand
+    this->std_functions.push_back(function_def_node{"get_rand", {}, {}, TYPE_INT});
+    // heapalloc
+    this->std_functions.push_back(function_def_node{"heapalloc", {}, {function_arg{"bytes", TYPE_INT}}, TYPE_VOID});
+    // strcpy
+    this->std_functions.push_back(function_def_node{"strcpy", {}, {
+                                                                      function_arg{"src", TYPE_STR},
+                                                                      function_arg{"dest", TYPE_STR},
+                                                                      function_arg{"bytes", TYPE_INT},
+                                                                  },
+                                                    TYPE_VOID});
+    // strlen
+    this->std_functions.push_back(function_def_node{"strlen", {}, {function_arg{"s", TYPE_STR}}, TYPE_VOID});
 }

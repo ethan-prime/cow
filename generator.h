@@ -23,6 +23,7 @@ private:
     ofstream file;
     vector<string_> strings_;
     vector<function_def_node> functions;
+    vector<function_def_node> std_functions;
     string current_function;
 
 public:
@@ -97,6 +98,9 @@ public:
     bool is_defined(string var);
     identifier_type get_type(string var);
     identifier_type expected_binary_expr_result(term_binary_node binary_expr);
+
+    // loads stdlib functions into this->std_functions
+    void load_stdlib();
 };
 
 template <typename T>
