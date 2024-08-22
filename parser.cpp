@@ -106,12 +106,42 @@ statement_node Parser::parse_statement()
     {
         stmt = this->parse_function_declaration();
     }
+    else if (this->current_token().kind == RETURN)
+    {
+        stmt = this->parse_return();
+    }
+    else if (this->current_token().kind == HASHTAG)
+    {
+        stmt.statement = this->parse_function_call();
+        stmt.kind = STMT_FUNCTION_CALL;
+    }
     else
     {
         error("a statement");
     }
     return stmt;
 };
+
+// <return> ::= '->' <term>
+statement_node Parser::parse_return()
+{
+    expr_node return_expr;
+    if (this->current_token().kind == RETURN)
+    {
+        this->advance();
+        return_expr = this->parse_expr();
+    }
+    else
+    {
+        error("return statement");
+    }
+    return_node ret_node;
+    ret_node.return_expr = return_expr;
+    statement_node stmt;
+    stmt.kind = STMT_RETURN;
+    stmt.statement = ret_node;
+    return stmt;
+}
 
 // <while_loop> ::= 'while' <comparison> 'do' '{' <statement> [<statement>]* '}'
 statement_node Parser::parse_while_loop()
@@ -831,7 +861,6 @@ statement_node Parser::parse_function_declaration()
     identifier_type type;
     vector<statement_node *> stmts;
     vector<function_arg> args;
-    expr_node ret;
 
     if (this->current_token().kind == DEFINE)
     {
@@ -952,7 +981,7 @@ statement_node Parser::parse_function_declaration()
     {
         error("->");
     }
-    if (this->current_token().kind == KEYW_INT || this->current_token().kind == KEYW_BOOL || this->current_token().kind == KEYW_REAL)
+    if (this->current_token().kind == KEYW_INT || this->current_token().kind == KEYW_BOOL || this->current_token().kind == KEYW_REAL || this->current_token().kind == VOID)
     {
         switch (this->current_token().kind)
         {
@@ -1013,6 +1042,9 @@ statement_node Parser::parse_function_declaration()
                 type = TYPE_REAL;
             }
             break;
+        case VOID:
+            type = TYPE_VOID;
+            break;
         default:
             error("invalid return type");
         }
@@ -1034,18 +1066,9 @@ statement_node Parser::parse_function_declaration()
     {
         error("{");
     }
-    while (this->current_token().kind != RETURN)
+    while (this->current_token().kind != CLOSE_BRACKET)
     {
         stmts.push_back(new statement_node(this->parse_statement()));
-    }
-    if (this->current_token().kind == RETURN)
-    {
-        this->advance();
-        ret = this->parse_expr();
-    }
-    else
-    {
-        error("->");
     }
     if (this->current_token().kind == CLOSE_BRACKET)
     {
@@ -1058,7 +1081,7 @@ statement_node Parser::parse_function_declaration()
 
     statement_node stmt;
     stmt.kind = STMT_FUNCTION_DECLARATION;
-    stmt.statement = function_def_node{identifier, stmts, args, type, ret};
+    stmt.statement = function_def_node{identifier, stmts, args, type};
 
     return stmt;
 }
@@ -1314,6 +1337,11 @@ void print_statement(statement_node stmt)
     case STMT_FUNCTION_DECLARATION:
         print_function_declaration(get<function_def_node>(stmt.statement));
         break;
+    case STMT_RETURN:
+        cout << "RETURN ";
+        print_expr(get<return_node>(stmt.statement).return_expr);
+        cout << endl;
+        break;
     default:
         break;
     }
@@ -1472,10 +1500,7 @@ void print_function_declaration(function_def_node function_def)
         cout << "       ";
         print_statement(*stmt);
     }
-    cout << "       RETURN ";
-    print_expr(function_def.return_expr);
-    cout << endl
-         << "   }" << endl;
+    cout << "   }" << endl;
 }
 
 bool Parser::in_strings_(vector<string_> strings_, string str)

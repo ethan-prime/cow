@@ -8,22 +8,21 @@
 fib.milk: gets the nth fibonacci number from input
 ```
 ```c
+moo "nth fibonacci number:"
 // get user input
-moo "Nth fibonacci number (0-indexed lol):"
 int! num = input
 
 // call fib function and MOO result!
 moo #fib(num)
 
 define fib: int! n -> int! {
-    // base case
-    int! ret = 1
-    if n > 0 then { 
-        // recursive case
-        ret = #fib(n - 1) + #fib(n - 1)
+    if n == 0 then {
+        -> 1
     }
-    // return result
-    -> ret
+    if n == 1 then {
+        -> 1
+    }
+    -> #fib(n - 1) + #fib(n - 2)
 }
 ```
 ```
@@ -37,7 +36,7 @@ $ ld fib.o -o fib
 $ ./fib
 ```
 ```
-Nth fibonacci number (0-indexed lol):
+nth fibonacci number (0-indexed lol):
 20
 10946
 ```
@@ -46,55 +45,47 @@ Nth fibonacci number (0-indexed lol):
 prime.milk: retrieves the nth prime number (given by user input)
 ```
 ```c
-moo "Hello welcome to the prime number generating program!"
-moo "Please enter the nth prime number that you want:"
+moo "Enter the nth prime number you want:"
+int! n = input // get user input
 
-int! n = input
+int! count = 0
+int! i = 2
 
-int! cur_prime_n = 0
-int! cur_num = 2
-
-// loop until we have the nth prime.
-while cur_prime_n < n do {
-    while #is_prime == false do { // call is_prime to see if cur_num is prime
-        cur_num = cur_num + 1
+// loop until we get the nth prime
+while count < n do {
+    while #is_prime(i) == false do {
+        i = i + 1
     }
-    cur_prime_n = cur_prime_n + 1
-    cur_num = cur_num + 1
-}
+    i = i + 1
+    count = count + 1
+} 
 
-moo ""
-moo "The nth prime number is:"
-cur_num = cur_num - 1 // we added an extra 1, we have to subtract
-moo cur_num // MOO result!
+i = i - 1
+moo "The nth prime is:"
+moo i // we found the nth prime!
 
 
-// FUNCTION DECLARATIONS
-
-// gets ceil(sqrt) of a cur_num
-define get_sqrt -> int {
+// returns ceil(sqrt) + 1 of a number for the prime checking function.
+define sqrt: int! num -> int! {
     int! sqrt = 1
     int! squared = 1
-    while ! squared > cur_num do {
+    while squared < num do {
         sqrt = sqrt + 1
         squared = sqrt ** 2
     }
-    -> sqrt
+    -> sqrt + 1
 }
 
-// returns whether cur_num is prime or not.
-define is_prime -> bool {
-    bool! res = true
-    for int! i = 2; i < #get_sqrt; i = i + 1 do {
-        if i == cur_num then {
-            break
-        }
-        int! remainder = cur_num % i
+// returns true if a number is prime, false otherwise.
+define is_prime: int! num -> bool! {
+    if num == 2 then { -> true } // 2 can give us headaches bc sqrt(2) -> 2.
+    for int! i = 2; i < #sqrt(num); i = i + 1 do {
+        int! remainder = num % i
         if remainder == 0 then {
-            res = false
+            -> false
         }
     }
-    -> res
+    -> true
 }
 ```
 ```
@@ -108,7 +99,6 @@ $ ld prime.o -o prime
 $ ./prime
 ```
 ```
-Hello welcome to the prime-number geneting program!
 Please enter the nth prime number that you want:
 10000
 

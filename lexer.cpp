@@ -132,6 +132,11 @@ bool is_keyword(const string &buf, token_type &kind)
         kind = DEFINE;
         return true;
     }
+    else if (buf == "void")
+    {
+        kind = VOID;
+        return true;
+    }
     else
     {
         return false;
@@ -270,6 +275,7 @@ Token Lexer::next_token()
             {
                 this->read();
             }
+            this->line_number++;
             this->read();
             return this->next_token();
         }

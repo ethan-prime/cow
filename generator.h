@@ -23,6 +23,7 @@ private:
     ofstream file;
     vector<string_> strings_;
     vector<function_def_node> functions;
+    string current_function;
 
 public:
     // constructor

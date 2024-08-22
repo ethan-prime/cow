@@ -105,6 +105,8 @@ string Token::repr()
         return "open_paren";
     case CLOSE_PAREN:
         return "close_paren";
+    case VOID:
+        return "void";
     default:
         return "moo! something went wrong when tokenizing...";
     }

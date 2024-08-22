@@ -55,6 +55,7 @@ enum token_type
     COLON,
     OPEN_PAREN,
     CLOSE_PAREN,
+    VOID,
 };
 
 class Token

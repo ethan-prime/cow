@@ -316,6 +316,14 @@ void Generator::statement_to_asm(statement_node stmt)
     case STMT_ARRAY_DECLARATION:
         array_declaration_to_asm(get<array_declare_node>(stmt.statement));
         break;
+    case STMT_RETURN:
+        expr_to_asm(get<return_node>(stmt.statement).return_expr);
+        file << "   jmp .END_FUNCTION_" << this->current_function << endl;
+        break;
+    case STMT_FUNCTION_CALL:
+        file << "   push %rax" << endl; // we might need to save %rax bc this is a void call (i.e. we are not saving the return value.)
+        func_call_to_asm(get<term_node>(stmt.statement));
+        file << "   pop %rax" << endl;
     default:
         break;
     }
@@ -585,11 +593,9 @@ bool Generator::statement_valid(statement_node stmt)
     case STMT_DECLARATION:
         return this->expr_valid(get<declaration_node>(stmt.statement).expr);
     case STMT_FUNCTION_DECLARATION:
-        for (auto stmt : get<function_def_node>(stmt.statement).statements)
-        {
-            if (!this->statement_valid(*stmt))
-                return false;
-        }
+        return true;
+        break;
+    case STMT_FUNCTION_CALL:
         return true;
         break;
     default:
@@ -960,80 +966,6 @@ void Generator::collect_all_functions()
         }
     }
 };
-
-void Generator::collect_function(function_def_node function_def)
-{
-    for (statement_node *stmt : function_def.statements)
-    {
-        if (stmt->kind == STMT_DECLARATION)
-        {
-            declaration_node decl = get<declaration_node>(stmt->statement);
-            if (!this->expr_valid(decl.expr))
-            {
-                // can't compile because file a sem error.
-                exit(0);
-            }
-            // add to our variables vector
-            this->variables.push_back(variable{decl.identifier, decl.type});
-        }
-        else if (stmt->kind == STMT_ARRAY_DECLARATION)
-        {
-            array_declare_node decl = get<array_declare_node>(stmt->statement);
-            if (!this->expr_valid(decl.len_expr))
-            {
-                // can't compile because file a sem error.
-                exit(0);
-            }
-            // add to our variables vector
-            if (is_defined(decl.identifier))
-            {
-                cout << "[leather] compilation failure:" << endl
-                     << "   attempted redeclaration of variable \'" << decl.identifier << "\'" << endl;
-                exit(0);
-            }
-            this->variables.push_back(variable{decl.identifier, decl.type});
-        }
-        else if (stmt->kind == STMT_LABEL)
-        {
-            label_node label = get<label_node>(stmt->statement);
-            // if it's a valid ssignment, make sure we store that
-            // this variable isa now defined.
-            if (!in_vector(this->labels, label.label))
-                this->labels.push_back(label.label);
-        }
-        else if (stmt->kind == STMT_IF_THEN)
-        {
-            this->collect_if_then(get<if_then_node>(stmt->statement)); // follow the nest
-            if (!statement_valid(*stmt))
-            {
-                exit(0);
-            }
-        }
-        else if (stmt->kind == STMT_WHILE_LOOP)
-        {
-            this->collect_while_loops(get<while_loop_node>(stmt->statement)); // follow the nest
-            if (!statement_valid(*stmt))
-            {
-                exit(0);
-            }
-        }
-        else if (stmt->kind == STMT_FOR_LOOP)
-        {
-            this->collect_for_loops(get<for_loop_node>(stmt->statement)); // follow the nest
-            if (!statement_valid(*stmt))
-            {
-                exit(0);
-            }
-        }
-        else if (stmt->kind == STMT_FUNCTION_DECLARATION)
-        {
-            cout << "[leather] compilation failure:" << endl
-                 << "   cannot define a new function within a function definition." << endl;
-            exit(0);
-        }
-    }
-    this->functions.push_back(function_def);
-}
 
 void Generator::collect_for_loops(for_loop_node for_loop)
 {
@@ -1811,22 +1743,6 @@ identifier_type Generator::expected_binary_expr_result(term_binary_node binary_e
     return (binary_expr.lhs.kind == TERM_REAL_LITERAL || binary_expr.rhs.kind == TERM_REAL_LITERAL) ? TYPE_REAL : TYPE_INT;
 }
 
-void Generator::function_declaration_to_asm(function_def_node function_def)
-{
-    file << "FUNCTION_" << function_def.identifier << ":" << endl;
-    for (auto stmt : function_def.statements)
-    {
-        this->statement_to_asm(*stmt);
-    }
-    identifier_type expected = expr_to_asm(function_def.return_expr);
-    if (expected != function_def.return_type)
-    {
-        cout << "[leather] compilation error:" << endl
-             << "    return type of \"" << function_def.identifier << "\" does not match the returned value." << endl;
-    }
-    file << "   ret" << endl;
-}
-
 // FUNCTION GENERATORS (beta)
 void Generator::func_to_asm(function_def_node function_def)
 {
@@ -1849,6 +1765,8 @@ void Generator::func_to_asm(function_def_node function_def)
     file << "FUNCTION_" << function_def.identifier << ":" << endl;
 
     // STEP 2
+    vector<variable> old_vars = this->variables;
+    this->variables = {};
     local_variables = this->collect_local_variables(function_def);
 
     // STEP 3 - do we need to push more registers later?
@@ -1864,7 +1782,9 @@ void Generator::func_to_asm(function_def_node function_def)
     // STEP 6 TODO!
     // the trick here is to treat the function basically as a separate program,
     // one with different defined variables.
-    vector<variable> old_vars = this->variables;
+
+    // assume only function arguments are declared at beginning of function body.
+    // this->variables = vector<variable>(local_variables.begin(), local_variables.begin() + function_def.arguments.size());
     this->variables = local_variables;
 
     map<unsigned int, string> int_idx_to_register;
@@ -1913,18 +1833,20 @@ void Generator::func_to_asm(function_def_node function_def)
     }
 
     // generate function body
+    this->current_function = function_def.identifier;
     for (statement_node *stmt : function_def.statements)
     {
         statement_to_asm(*stmt);
     }
+    this->current_function = "";
 
-    // STEP 7 TODO! - also add void functions
-    expr_to_asm(function_def.return_expr);
+    // STEP 7 - we actually dont need this anymore, we generate these as stmts now!
 
     // now we give old global variables back to program just in case.
     this->variables = old_vars;
 
     // STEP 8
+    file << ".END_FUNCTION_" << function_def.identifier << ":" << endl; // we need to be able to jump here for early returns
     file << "   addq $" << local_variables.size() * 8 << ", %rsp" << endl;
 
     // STEP 9
@@ -2071,18 +1993,20 @@ vector<variable> Generator::collect_local_variables(function_def_node function_d
                  << "    cannot define another function within a function declaration." << endl;
             exit(0);
             break;
+        case STMT_RETURN:
+            if (!local_expr_valid(local_variables, get<return_node>(stmt->statement).return_expr))
+            {
+                cout << "[leather] compilation error:" << endl
+                     << "    invalid return expr: ->";
+                print_expr(get<return_node>(stmt->statement).return_expr);
+                cout << endl;
+                exit(0);
+            }
+            break;
         default:
             break;
         }
     }
-
-    if (!local_expr_valid(local_variables, function_def.return_expr))
-    {
-        cout << "[leather] compilation error:" << endl
-             << "    return expression of function " << function_def.identifier << "\'" << " invalid." << endl;
-        exit(0);
-    }
-
     return local_variables;
 }
 
@@ -2097,26 +2021,22 @@ void Generator::func_collect_arguments(vector<variable> &local_variables, vector
 void Generator::func_collect_for_loop(vector<variable> &local_variables, for_loop_node for_loop)
 {
     declaration_node decl = for_loop.declaration;
-    if (!this->expr_valid(decl.expr))
+    if (!this->local_expr_valid(local_variables, decl.expr))
     {
         // can't compile because file a sem error.
         exit(0);
     }
-    // add to our variables vector
-    if (is_defined(decl.identifier))
-    {
-        cout << "[leather] compilation failure:" << endl
-             << "   attempted redeclaration of variable \'" << decl.identifier << "\'" << endl;
-        exit(0);
-    }
     // add for loop var to variables vector
-    local_variables.push_back(variable{decl.identifier, decl.type});
+    if (!locally_defined(local_variables, decl.identifier))
+    {
+        local_variables.push_back(variable{decl.identifier, decl.type});
+    }
     for (statement_node *stmt : for_loop.statements)
     {
         if (stmt->kind == STMT_DECLARATION)
         {
             declaration_node decl = get<declaration_node>(stmt->statement);
-            if (!this->expr_valid(decl.expr))
+            if (!this->local_expr_valid(local_variables, decl.expr))
             {
                 // can't compile because file a sem error.
                 exit(0);
@@ -2127,13 +2047,13 @@ void Generator::func_collect_for_loop(vector<variable> &local_variables, for_loo
         else if (stmt->kind == STMT_ARRAY_DECLARATION)
         {
             array_declare_node decl = get<array_declare_node>(stmt->statement);
-            if (!this->expr_valid(decl.len_expr))
+            if (!this->local_expr_valid(local_variables, decl.len_expr))
             {
                 // can't compile because file a sem error.
                 exit(0);
             }
             // add to our variables vector
-            if (is_defined(decl.identifier))
+            if (locally_defined(local_variables, decl.identifier))
             {
                 cout << "[leather] compilation failure:" << endl
                      << "   attempted redeclaration of variable \'" << decl.identifier << "\'" << endl;
@@ -2151,27 +2071,15 @@ void Generator::func_collect_for_loop(vector<variable> &local_variables, for_loo
         }
         else if (stmt->kind == STMT_IF_THEN)
         {
-            this->collect_if_then(get<if_then_node>(stmt->statement)); // follow the nest
-            if (!statement_valid(*stmt))
-            {
-                exit(0);
-            }
+            this->func_collect_if_then(local_variables, get<if_then_node>(stmt->statement)); // follow the nest
         }
         else if (stmt->kind == STMT_WHILE_LOOP)
         {
-            this->collect_while_loops(get<while_loop_node>(stmt->statement)); // follow the nest
-            if (!statement_valid(*stmt))
-            {
-                exit(0);
-            }
+            this->func_collect_while_loop(local_variables, get<while_loop_node>(stmt->statement)); // follow the nest
         }
         else if (stmt->kind == STMT_FOR_LOOP)
         {
-            this->collect_for_loops(get<for_loop_node>(stmt->statement)); // follow the nest
-            if (!statement_valid(*stmt))
-            {
-                exit(0);
-            }
+            this->func_collect_for_loop(local_variables, get<for_loop_node>(stmt->statement)); // follow the nest
         }
         else if (stmt->kind == STMT_FUNCTION_DECLARATION)
         {
@@ -2189,7 +2097,7 @@ void Generator::func_collect_while_loop(vector<variable> &local_variables, while
         if (stmt->kind == STMT_DECLARATION)
         {
             declaration_node decl = get<declaration_node>(stmt->statement);
-            if (!this->expr_valid(decl.expr))
+            if (!this->local_expr_valid(local_variables, decl.expr))
             {
                 // can't compile because file a sem error.
                 exit(0);
@@ -2200,13 +2108,13 @@ void Generator::func_collect_while_loop(vector<variable> &local_variables, while
         else if (stmt->kind == STMT_ARRAY_DECLARATION)
         {
             array_declare_node decl = get<array_declare_node>(stmt->statement);
-            if (!this->expr_valid(decl.len_expr))
+            if (!this->local_expr_valid(local_variables, decl.len_expr))
             {
                 // can't compile because file a sem error.
                 exit(0);
             }
             // add to our variables vector
-            if (is_defined(decl.identifier))
+            if (locally_defined(local_variables, decl.identifier))
             {
                 cout << "[leather] compilation failure:" << endl
                      << "   attempted redeclaration of variable \'" << decl.identifier << "\'" << endl;
@@ -2224,7 +2132,7 @@ void Generator::func_collect_while_loop(vector<variable> &local_variables, while
         }
         else if (stmt->kind == STMT_IF_THEN)
         {
-            this->collect_if_then(get<if_then_node>(stmt->statement)); // follow the nest
+            this->func_collect_if_then(local_variables, get<if_then_node>(stmt->statement)); // follow the nest
             if (!statement_valid(*stmt))
             {
                 exit(0);
@@ -2232,7 +2140,7 @@ void Generator::func_collect_while_loop(vector<variable> &local_variables, while
         }
         else if (stmt->kind == STMT_WHILE_LOOP)
         {
-            this->collect_while_loops(get<while_loop_node>(stmt->statement)); // follow the nest
+            this->func_collect_while_loop(local_variables, get<while_loop_node>(stmt->statement)); // follow the nest
             if (!statement_valid(*stmt))
             {
                 exit(0);
@@ -2240,7 +2148,7 @@ void Generator::func_collect_while_loop(vector<variable> &local_variables, while
         }
         else if (stmt->kind == STMT_FOR_LOOP)
         {
-            this->collect_for_loops(get<for_loop_node>(stmt->statement)); // follow the nest
+            this->func_collect_for_loop(local_variables, get<for_loop_node>(stmt->statement)); // follow the nest
             if (!statement_valid(*stmt))
             {
                 exit(0);
@@ -2262,7 +2170,7 @@ void Generator::func_collect_if_then(vector<variable> &local_variables, if_then_
         if (stmt->kind == STMT_DECLARATION)
         {
             declaration_node decl = get<declaration_node>(stmt->statement);
-            if (!this->expr_valid(decl.expr))
+            if (!this->local_expr_valid(local_variables, decl.expr))
             {
                 // can't compile because file a sem error.
                 exit(0);
@@ -2273,13 +2181,13 @@ void Generator::func_collect_if_then(vector<variable> &local_variables, if_then_
         else if (stmt->kind == STMT_ARRAY_DECLARATION)
         {
             array_declare_node decl = get<array_declare_node>(stmt->statement);
-            if (!this->expr_valid(decl.len_expr))
+            if (!this->local_expr_valid(local_variables, decl.len_expr))
             {
                 // can't compile because file a sem error.
                 exit(0);
             }
             // add to our variables vector
-            if (is_defined(decl.identifier))
+            if (locally_defined(local_variables, decl.identifier))
             {
                 cout << "[leather] compilation failure:" << endl
                      << "   attempted redeclaration of variable \'" << decl.identifier << "\'" << endl;
@@ -2297,7 +2205,7 @@ void Generator::func_collect_if_then(vector<variable> &local_variables, if_then_
         }
         else if (stmt->kind == STMT_IF_THEN)
         {
-            this->collect_if_then(get<if_then_node>(stmt->statement)); // follow the nest
+            this->func_collect_if_then(local_variables, get<if_then_node>(stmt->statement)); // follow the nest
             if (!statement_valid(*stmt))
             {
                 exit(0);
@@ -2305,7 +2213,7 @@ void Generator::func_collect_if_then(vector<variable> &local_variables, if_then_
         }
         else if (stmt->kind == STMT_WHILE_LOOP)
         {
-            this->collect_while_loops(get<while_loop_node>(stmt->statement)); // follow the nest
+            this->func_collect_while_loop(local_variables, get<while_loop_node>(stmt->statement)); // follow the nest
             if (!statement_valid(*stmt))
             {
                 exit(0);
@@ -2313,7 +2221,7 @@ void Generator::func_collect_if_then(vector<variable> &local_variables, if_then_
         }
         else if (stmt->kind == STMT_FOR_LOOP)
         {
-            this->collect_for_loops(get<for_loop_node>(stmt->statement)); // follow the nest
+            this->func_collect_for_loop(local_variables, get<for_loop_node>(stmt->statement)); // follow the nest
             if (!statement_valid(*stmt))
             {
                 exit(0);
